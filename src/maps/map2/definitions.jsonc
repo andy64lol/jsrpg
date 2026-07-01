@@ -1,0 +1,26 @@
+// en los tiles defines los tiles de esta mapa y en collisions defines las colisiones y lógica como eventos y eso
+// esto es de la mapa 2
+
+{
+    "tiles":{
+        "0": "assets/tiles/pared_dungeon_verde.png",
+        "1": "assets/tiles/suelo_dungeon_verde.png",
+        "2": "assets/tiles/pared_puerta_dungeon_verde.png"  
+    },
+    "collisions":{
+        "0": {
+            "type": "air"
+        },
+        "1":{
+            "type": "solid"
+        },
+        "3":{
+            "type":"door",
+            "target_map":"map1",
+            "target_tile": {
+                "x": 4,
+                "y": 6
+            }
+        }
+    }
+}
