@@ -1,4 +1,4 @@
-import Game from "./src/engine/index.js";
+import Game from "./engine/index.js";
 
 
 const canvas = document.getElementById("game");
