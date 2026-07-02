@@ -8,7 +8,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #080a12;
+    background: #000000;
     color: #edf2ff;
     font-family: Inter, system-ui, sans-serif;
 }
@@ -18,6 +18,6 @@ canvas {
     height: 560px;
     image-rendering: crisp-edges;
     image-rendering: pixelated;
-    border: 4px solid #4b5d88;
-    background: #0b1222;
+    border: 4px solid #000000;
+    background: #000000;
 }

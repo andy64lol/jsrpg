@@ -1,4 +1,5 @@
-import Game from "./engine/index.js";
+import Game from "./src/engine/index.js";
+
 
 const canvas = document.getElementById("game");
 const game = new Game(canvas);
@@ -6,15 +7,15 @@ const game = new Game(canvas);
 async function init() {
     try {
         await game.start("map1");
+        // renderizar
+        requestAnimationFrame(loop);
     } catch (error) {
         console.error(error);
     }
 }
 
 function handleMove(dx, dy) {
-    game.movePlayer(dx, dy).catch(error => {
-        console.error(error);
-    });
+    game.movePlayer(dx, dy).catch(error => console.error(error));
 }
 
 window.addEventListener("keydown", event => {
@@ -52,3 +53,9 @@ window.addEventListener("keydown", event => {
 });
 
 init();
+
+function loop(now) {
+    game.update(now);
+    game.draw();
+    requestAnimationFrame(loop);
+}

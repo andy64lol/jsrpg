@@ -1,0 +1,15 @@
+// Este es el archivo de configuración
+
+{
+    "player":{
+        "speed": 2,
+        "waddling":{
+            "enabled": true,
+            "speed": 0.5,
+            "angle": 10
+        }
+    },
+    "map":{
+        "tile_size": 8
+    }
+}
