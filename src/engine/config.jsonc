@@ -3,10 +3,9 @@
 {
     "player":{
         "speed": 2,
-        "waddling":{
+        "gliding":{
             "enabled": true,
-            "speed": 0.25,
-            "angle": 10
+            "duration": 0.12
         }
     },
     "map":{

@@ -12,7 +12,13 @@ function parseJSONC(text) {
 }
 
 async function load(mapName) {
-    const base = `src/maps/${mapName}/`;
+    const base = `maps/${mapName}/`;
+
+    const response = await fetch(base + "definitions.jsonc");
+    console.log(response.status);
+    console.log(response.url);
+    const debugJSONC = await response.text();
+    console.log(debugJSONC);
 
     const [mapCSV, logicCSV, defJSONC] = await Promise.all([
         fetch(base + "map.csv").then(r => r.text()),
