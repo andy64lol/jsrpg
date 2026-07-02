@@ -5,7 +5,8 @@
     "tiles":{
         "0": "assets/tiles/pared_dungeon_verde.png",
         "1": "assets/tiles/suelo_dungeon_verde.png",
-        "2": "assets/tiles/pared_puerta_dungeon_verde.png"  
+        "2": "assets/tiles/pared_puerta_dungeon_verde.png",
+        "3": "assets/tiles/suelo_dungeon_verde_pinchos.png"
     },
     "collisions":{
         "0": {
@@ -21,6 +22,10 @@
                 "x": 6,
                 "y": 4
             }
+        },
+        "3":{
+            "type":"player_damage",
+            "damage": 1
         }
     }
 }

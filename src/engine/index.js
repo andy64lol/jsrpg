@@ -4,7 +4,14 @@ import Player from "./player.js";
 const DEFAULT_TILE_SIZE = 8;
 const PLAYER_SPRITES = {
     left: "assets/sprites/player/left.png",
-    right: "assets/sprites/player/right.png"
+    right: "assets/sprites/player/right.png",
+    leftDead: "assets/sprites/player/left_dead.png",
+    rightDead: "assets/sprites/player/right_dead.png"
+};
+
+const UI_SPRITES = {
+    heart: "assets/UI/heart.png",
+    brokenHeart: "assets/UI/broken_heart.png"
 };
 
 const KEY_DIRECTIONS = {
@@ -34,14 +41,16 @@ async function loadJSONC(url) {
 }
 
 export default class Game {
-    constructor(canvas) {
+    constructor(canvas, hudElement = null) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
+        this.hudElement = hudElement;
         this.map = null;
         this.player = null;
         this.imageCache = {};
         this.tileImages = {};
         this.playerImages = {};
+        this.uiImages = {};
         this.config = {
             player: {
                 speed: 2,
@@ -55,6 +64,12 @@ export default class Game {
             }
         };
         this.tileSize = DEFAULT_TILE_SIZE;
+        this.viewportWidth = 7;
+        this.viewportHeight = 7;
+        this.camera = { x: 0, y: 0 };
+        this.health = 0;
+        this.maxHealth = 0;
+        this.isDead = false;
         this.lastUpdate = null;
         this.moveStepTimer = 0;
         this.activeMoveKeys = new Set();
@@ -80,6 +95,10 @@ export default class Game {
             }
         };
         this.tileSize = this.config.map.tile_size ?? this.tileSize;
+        this.viewportWidth = this.config.map.viewport_width ?? this.viewportWidth;
+        this.viewportHeight = this.config.map.viewport_height ?? this.viewportHeight;
+        this.maxHealth = (this.config.player.hearts ?? this.maxHealth) || 10;
+        this.health = this.maxHealth;
     }
 
     getStepInterval() {
@@ -99,15 +118,24 @@ export default class Game {
         }
 
         this.player = new Player(this.map.spawn.x, this.map.spawn.y);
+        this.player.lastTilePosition = { x: this.player.x, y: this.player.y };
+        this.isDead = false;
+        this.health = this.maxHealth;
+
         await this.loadTextures();
         this.resizeCanvas();
+        this.applyTileEffects(this.player.x, this.player.y);
         this.draw();
         return this;
     }
 
     async loadTextures() {
         const tileSources = Object.values(this.map.definitions.tiles);
-        const assetSources = new Set([...tileSources, ...Object.values(PLAYER_SPRITES)]);
+        const assetSources = new Set([
+            ...tileSources,
+            ...Object.values(PLAYER_SPRITES),
+            ...Object.values(UI_SPRITES)
+        ]);
 
         for (const src of assetSources) {
             if (!this.imageCache[src]) {
@@ -121,17 +149,40 @@ export default class Game {
 
         this.playerImages = {
             left: this.imageCache[PLAYER_SPRITES.left],
-            right: this.imageCache[PLAYER_SPRITES.right]
+            right: this.imageCache[PLAYER_SPRITES.right],
+            leftDead: this.imageCache[PLAYER_SPRITES.leftDead],
+            rightDead: this.imageCache[PLAYER_SPRITES.rightDead]
+        };
+
+        this.uiImages = {
+            heart: this.imageCache[UI_SPRITES.heart],
+            brokenHeart: this.imageCache[UI_SPRITES.brokenHeart]
         };
     }
 
     resizeCanvas() {
-        this.canvas.width = this.map.width * this.tileSize;
-        this.canvas.height = this.map.height * this.tileSize;
+        this.camera.x = 0;
+        this.camera.y = 0;
+        const width = Math.min(this.map.width, this.viewportWidth);
+        const height = Math.min(this.map.height, this.viewportHeight);
+        this.canvas.width = width * this.tileSize;
+        this.canvas.height = height * this.tileSize;
+    }
+
+    getCamera() {
+        const halfWidth = Math.floor(this.viewportWidth / 2);
+        const halfHeight = Math.floor(this.viewportHeight / 2);
+        let x = this.player.x - halfWidth;
+        let y = this.player.y - halfHeight;
+
+        x = Math.max(0, Math.min(x, this.map.width - this.viewportWidth));
+        y = Math.max(0, Math.min(y, this.map.height - this.viewportHeight));
+
+        return { x, y };
     }
 
     setMoveKey(key, active) {
-        if (this.transition) {
+        if (this.transition || this.isDead) {
             return;
         }
 
@@ -222,7 +273,7 @@ export default class Game {
     }
 
     async movePlayer(dx, dy) {
-        if (this.isAnimating || this.transition) {
+        if (this.isAnimating || this.transition || this.isDead) {
             return;
         }
 
@@ -240,6 +291,8 @@ export default class Game {
         }
 
         if (this.player.x !== originX || this.player.y !== originY) {
+            this.applyTileEffects(this.player.x, this.player.y);
+
             this.animation = {
                 fromX: originX,
                 fromY: originY,
@@ -249,6 +302,43 @@ export default class Game {
             };
             this.isAnimating = true;
         }
+    }
+
+    applyTileEffects(x, y) {
+        if (!this.map || this.isDead) {
+            return;
+        }
+
+        if (this.player.lastTilePosition && this.player.lastTilePosition.x === x && this.player.lastTilePosition.y === y) {
+            return;
+        }
+
+        const id = this.map.logic[y][x];
+        const def = this.map.definitions.collisions[id];
+
+        this.player.lastTilePosition = { x, y };
+
+        if (def?.type === "player_damage") {
+            const damage = Number(def.damage || 1);
+            if (damage > 0) {
+                this.health = Math.max(0, this.health - damage);
+                if (this.health <= 0) {
+                    this.die();
+                }
+            }
+        }
+    }
+
+    die() {
+        if (this.isDead) {
+            return;
+        }
+
+        this.isDead = true;
+        this.activeMoveKeys.clear();
+        this.moveOrder = [];
+        this.isAnimating = false;
+        this.animation = null;
     }
 
     startTransition(warp) {
@@ -268,8 +358,10 @@ export default class Game {
         this.map = newMap;
         this.player.x = warp.toX;
         this.player.y = warp.toY;
+        this.player.lastTilePosition = null;
         await this.loadTextures();
         this.resizeCanvas();
+        this.applyTileEffects(this.player.x, this.player.y);
         if (this.transition) {
             this.transition.phase = "fade-in";
             this.transition.timer = 0;
@@ -281,19 +373,31 @@ export default class Game {
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        for (let y = 0; y < this.map.height; y++) {
-            for (let x = 0; x < this.map.width; x++) {
+        const camera = this.getCamera();
+        const viewWidth = Math.min(this.viewportWidth, this.map.width);
+        const viewHeight = Math.min(this.viewportHeight, this.map.height);
+
+        for (let y = camera.y; y < camera.y + viewHeight; y++) {
+            for (let x = camera.x; x < camera.x + viewWidth; x++) {
                 const id = this.map.map[y][x];
                 const src = this.map.definitions.tiles[id];
                 const tileImage = this.tileImages[src];
 
                 if (tileImage) {
-                    ctx.drawImage(tileImage, x * this.tileSize, y * this.tileSize, this.tileSize, this.tileSize);
+                    ctx.drawImage(
+                        tileImage,
+                        (x - camera.x) * this.tileSize,
+                        (y - camera.y) * this.tileSize,
+                        this.tileSize,
+                        this.tileSize
+                    );
                 }
             }
         }
 
-        const playerSprite = this.playerImages[this.player.facing] || this.playerImages.right;
+        const playerSprite = this.isDead
+            ? this.playerImages[this.player.facing === "left" ? "leftDead" : "rightDead"]
+            : this.playerImages[this.player.facing] || this.playerImages.right;
         let renderX = this.player.x;
         let renderY = this.player.y;
 
@@ -304,7 +408,26 @@ export default class Game {
             renderY = this.animation.fromY + (this.animation.toY - this.animation.fromY) * ease;
         }
 
-        ctx.drawImage(playerSprite, renderX * this.tileSize, renderY * this.tileSize, this.tileSize, this.tileSize);
+        ctx.drawImage(
+            playerSprite,
+            (renderX - camera.x) * this.tileSize,
+            (renderY - camera.y) * this.tileSize,
+            this.tileSize,
+            this.tileSize
+        );
+
+        this.drawHealthUI();
+
+        if (this.isDead) {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.95)";
+            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = `${Math.max(12, this.tileSize * 1.25)}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("you died...", this.canvas.width / 2, this.canvas.height / 2);
+            return;
+        }
 
         if (this.transition) {
             const alpha = this.transition.phase === "fade-out"
@@ -313,5 +436,42 @@ export default class Game {
             ctx.fillStyle = `rgba(0,0,0,${alpha})`;
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
+    }
+
+    drawHealthUI() {
+        if (!this.hudElement) {
+            return;
+        }
+
+        const totalHearts = Math.ceil(this.maxHealth / 2);
+        const heartSize = this.tileSize;
+        const heartHtml = [];
+
+        for (let index = 0; index < totalHearts; index++) {
+            const heartNumber = index + 1;
+            const heartMaxHp = heartNumber * 2;
+            const heartMinHp = heartMaxHp - 1;
+            const isFull = this.health >= heartMaxHp;
+            const isHalf = this.health === heartMinHp;
+            const src = (isFull || isHalf) ? this.uiImages.heart?.src : this.uiImages.brokenHeart?.src;
+            let transform = "";
+
+            if (isHalf && !this.isDead) {
+                const jitterX = (Math.random() * 4 - 2).toFixed(2);
+                const jitterY = (Math.random() * 4 - 2).toFixed(2);
+                transform = `transform: translate(${jitterX}px, ${jitterY}px);`;
+            }
+
+            heartHtml.push(`
+                <img
+                    class="hud-heart"
+                    src="${src || ""}"
+                    style="width: ${heartSize}px; height: ${heartSize}px; ${transform}"
+                    aria-hidden="true"
+                />
+            `);
+        }
+
+        this.hudElement.innerHTML = heartHtml.join("");
     }
 }

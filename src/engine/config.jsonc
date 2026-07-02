@@ -6,7 +6,8 @@
         "gliding":{
             "enabled": true,
             "duration": 0.12
-        }
+        },
+        "hearts": 10 //hp, hearts in the UI dir inside assets, 2 hp is a heart, and what is left is the broken variant
     },
     "map":{
         "tile_size": 8

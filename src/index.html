@@ -21,6 +21,11 @@
         font-family: Inter, system-ui, sans-serif;
       }
 
+      .game-container {
+        position: relative;
+        display: inline-block;
+      }
+
       canvas {
         width: 560px;
         height: 560px;
@@ -28,12 +33,31 @@
         image-rendering: pixelated;
         border: 4px solid #000000;
         background: #000000;
+        display: block;
+      }
+
+      .hud {
+        position: absolute;
+        top: -24px;
+        right: 0;
+        display: flex;
+        gap: 2px;
+        pointer-events: none;
+      }
+
+      .hud-heart {
+        display: block;
+        width: 16px;
+        height: 16px;
       }
     </style>
   </head>
 
   <body>
-    <canvas id="game" width="56" height="56" aria-label="RPG game window"></canvas>
+    <div class="game-container">
+      <canvas id="game" width="56" height="56" aria-label="RPG game window"></canvas>
+      <div id="hud" class="hud" aria-label="health display"></div>
+    </div>
     <script type="module">
       import Game from "./engine/index.js";
       const KEY_DIRECTIONS = {
@@ -47,7 +71,8 @@
         arrowright: true
       };
       const canvas = document.getElementById("game");
-      const game = new Game(canvas);
+      const hud = document.getElementById("hud");
+      const game = new Game(canvas, hud);
       async function init() {
         try {
           await game.start("map1");
