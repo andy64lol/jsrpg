@@ -67,6 +67,7 @@ export default class Game {
         this.viewportWidth = 7;
         this.viewportHeight = 7;
         this.camera = { x: 0, y: 0 };
+        this.cameraLerpSpeed = 18;
         this.health = 0;
         this.maxHealth = 0;
         this.isDead = false;
@@ -218,6 +219,13 @@ export default class Game {
         return { dx: 0, dy: 0 };
     }
 
+    updateCamera(deltaSeconds) {
+        const target = this.getCamera();
+        const t = Math.min(1, deltaSeconds * this.cameraLerpSpeed);
+        this.camera.x += (target.x - this.camera.x) * t;
+        this.camera.y += (target.y - this.camera.y) * t;
+    }
+
     update(now) {
         if (!this.map) {
             return;
@@ -270,6 +278,8 @@ export default class Game {
         } else if (!isMoving) {
             this.moveStepTimer = 0;
         }
+
+        this.updateCamera(deltaSeconds);
     }
 
     async movePlayer(dx, dy) {
@@ -444,7 +454,7 @@ export default class Game {
         }
 
         const totalHearts = Math.ceil(this.maxHealth / 2);
-        const heartSize = this.tileSize;
+        const heartSize = Math.max(24, this.tileSize * 3);
         const heartHtml = [];
 
         for (let index = 0; index < totalHearts; index++) {
