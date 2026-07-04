@@ -1,0 +1,14 @@
+{
+    "redApple": {
+        "id": "redApple",
+        "texture": "assets/items/apple.png",
+        "display_name": "Apple",
+        "description": "A juicy red apple. Restores a small amount of health.",
+        "type": "consumable",
+        "use": {
+            "action": "heal",
+            "amount": 2
+        },
+        "heals": 2
+    }
+}

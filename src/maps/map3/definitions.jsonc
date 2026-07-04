@@ -6,7 +6,8 @@
         "0": "assets/tiles/pared_dungeon_verde.png",
         "1": "assets/tiles/suelo_dungeon_verde.png",
         "2": "assets/tiles/pared_puerta_dungeon_verde.png",
-        "3": "assets/tiles/suelo_dungeon_verde_pinchos.png"
+        "3": "assets/tiles/suelo_dungeon_verde_pinchos.png",
+        "4": "assets/tiles/chest.png"
     },
     "collisions":{
         "0": {
@@ -25,7 +26,19 @@
         },
         "3":{
             "type":"player_damage",
-            "damage": 1
+            "damage": 1 //bastante claro, no?
+        },
+        "4":{
+            "type": "chest",
+            "contains": "redApple", //qué contiene
+            "solid": true, // si no lo fuese el jugador podria interactuar con este moviendose al tile pero poco sentido tendria un jugador estar encima de un cofre, lo mismo que le pasa a la fuente de map1
+            "interactType": "click", // forma de "trigger" para interactuar
+            "interactRequirements":{ //requisitos para interactuar
+                "player_in_radius": 1,
+                "diagonal": false
+            },
+            "afterOpeningCollision": "0", // al abrir su colisión se vuelve aire
+            "afterOpeningTile": "1" // al abrir desaparece
         }
     }
 }

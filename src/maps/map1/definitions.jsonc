@@ -8,7 +8,8 @@
     "tiles":{
         "0": "assets/tiles/pared_dungeon_verde.png",
         "1": "assets/tiles/suelo_dungeon_verde.png",
-        "2":"assets/tiles/pared_puerta_dungeon_verde.png"  
+        "2":"assets/tiles/pared_puerta_dungeon_verde.png",
+        "3": "assets/tiles/suelo_dungeon_verde_fuente_regenerativa.png"  
     },
     "collisions":{
         "0": {
@@ -28,6 +29,24 @@
                 "y": 2
                 // aquí no hay x 0 ni y 0 así que aparece en frente de la puerta, no hay cordenadas cartesianas por cierto
             }
+        },
+        "4":{
+            "type": "heal",
+            "infinity": true,
+            "heals": 10,
+            "solid": true, //el jugador no va a estar sobre la fuente
+            "interactType": "click",
+            "interactRequirements":{
+                "player_in_radius": 1, // vamos a usar radio de tiles
+                "diagonal": false // no se puede interactuar en diagonal, solo en horizontal y vertical
+                // quedaria algo así
+                // x es donde se puede interactuar y "y" es donde está el tile para interactuar:
+                //
+                // x
+                //xyx
+                // x
+            },
+            "afterInteractText": "You drank the water and restored 10 health." //texto que dice
         }
     }
 }

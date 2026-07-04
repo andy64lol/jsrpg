@@ -15,11 +15,13 @@ export default class Player {
 
         if (dx < 0) this.facing = "left";
         if (dx > 0) this.facing = "right";
+        if (dy < 0) this.facing = "up";
+        if (dy > 0) this.facing = "down";
 
         const id = logic[ny][nx];
         const def = definitions.collisions[id];
 
-        if (def.type === "solid") {
+        if (def.type === "solid" || def.solid === true) {
             return;
         }
 

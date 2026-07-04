@@ -10,6 +10,13 @@
         box-sizing: border-box;
       }
 
+      @font-face {
+        font-family: "PixeloidMono";
+        src: url("./assets/UI/font/PixeloidMono-nAOpP.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
@@ -18,7 +25,7 @@
         justify-content: center;
         background: #000000;
         color: #edf2ff;
-        font-family: Inter, system-ui, sans-serif;
+        font-family: "PixeloidMono", monospace, system-ui, sans-serif;
       }
 
       .game-container {
@@ -51,6 +58,100 @@
         width: 24px;
         height: 24px;
       }
+
+      .inventory {
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        display: flex;
+        gap: 6px;
+        background: rgba(0, 0, 0, 0.65);
+        border: 1px solid #5f7cff;
+        border-radius: 8px;
+        padding: 8px;
+        z-index: 10;
+        color: #edf2ff;
+        font-size: 14px;
+      }
+
+      .inventory-slot {
+        padding: 6px 10px;
+        border: 1px solid #ffffff33;
+        border-radius: 6px;
+        min-width: 76px;
+        text-align: center;
+      }
+
+      .inventory-slot.selected {
+        border-color: #5f7cff;
+        background: rgba(95, 124, 255, 0.24);
+      }
+
+      .inventory-empty {
+        opacity: 0.75;
+      }
+
+      .settings-button {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 20;
+        padding: 8px 12px;
+        border: 1px solid #edf2ff88;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.75);
+        color: #edf2ff;
+        cursor: pointer;
+        font-family: "PixeloidMono", monospace, system-ui, sans-serif;
+      }
+
+      .settings-panel {
+        position: fixed;
+        top: 52px;
+        right: 12px;
+        z-index: 20;
+        width: 220px;
+        background: rgba(0, 0, 0, 0.95);
+        border: 1px solid #5f7cff;
+        border-radius: 10px;
+        padding: 12px;
+        color: #edf2ff;
+        display: none;
+        font-size: 13px;
+      }
+
+      .settings-panel button {
+        width: 100%;
+        margin-top: 8px;
+        padding: 8px;
+        border: 1px solid #edf2ff55;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #edf2ff;
+        cursor: pointer;
+        font-family: "PixeloidMono", monospace, system-ui, sans-serif;
+      }
+
+      .settings-panel button:hover {
+        border-color: #5f7cff;
+      }
+
+      .message {
+        position: fixed;
+        bottom: 92px;
+        left: 12px;
+        padding: 10px 14px;
+        background: rgba(0, 0, 0, 0.85);
+        border: 1px solid #5f7cff;
+        border-radius: 8px;
+        color: #edf2ff;
+        font-family: "PixeloidMono", monospace, system-ui, sans-serif;
+        font-size: 14px;
+        z-index: 15;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+      }
     </style>
   </head>
 
@@ -58,6 +159,14 @@
     <div class="game-container">
       <canvas id="game" width="56" height="56" aria-label="RPG game window"></canvas>
       <div id="hud" class="hud" aria-label="health display"></div>
+      <div id="inventory" class="inventory" aria-label="inventory display"></div>
+    </div>
+    <div id="message" class="message" aria-live="polite"></div>
+    <button id="settingsButton" class="settings-button" type="button">Settings</button>
+    <div id="settingsPanel" class="settings-panel" aria-hidden="true">
+      <div>Settings</div>
+      <button id="toggleMusicButton" type="button">Toggle Music</button>
+      <button id="clearSaveButton" type="button">Reset Save</button>
     </div>
     <script type="module">
       import Game from "./engine/index.js";
@@ -73,7 +182,13 @@
       };
       const canvas = document.getElementById("game");
       const hud = document.getElementById("hud");
-      const game = new Game(canvas, hud);
+      const inventory = document.getElementById("inventory");
+      const messageElement = document.getElementById("message");
+      const settingsButton = document.getElementById("settingsButton");
+      const settingsPanel = document.getElementById("settingsPanel");
+      const toggleMusicButton = document.getElementById("toggleMusicButton");
+      const clearSaveButton = document.getElementById("clearSaveButton");
+      const game = new Game(canvas, hud, inventory, messageElement);
       async function init() {
         try {
           await game.start("map1");
@@ -85,9 +200,35 @@
       window.addEventListener("keydown", event => {
         if (event.defaultPrevented) return;
         const key = event.key.toLowerCase();
+
         if (KEY_DIRECTIONS[key]) {
           event.preventDefault();
           game.setMoveKey(key, true);
+          return;
+        }
+
+        if (key === "e") {
+          event.preventDefault();
+          game.useSelectedItem();
+          return;
+        }
+
+        if (key === "f") {
+          event.preventDefault();
+          game.interactForward();
+          return;
+        }
+
+        if (key === "[") {
+          event.preventDefault();
+          game.cycleInventory(-1);
+          return;
+        }
+
+        if (key === "]") {
+          event.preventDefault();
+          game.cycleInventory(1);
+          return;
         }
       });
       window.addEventListener("keyup", event => {
@@ -97,6 +238,34 @@
           game.setMoveKey(key, false);
         }
       });
+
+      canvas.addEventListener("click", event => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const clickX = (event.clientX - rect.left) * scaleX;
+        const clickY = (event.clientY - rect.top) * scaleY;
+        const tileX = Math.floor(clickX / game.tileSize);
+        const tileY = Math.floor(clickY / game.tileSize);
+        const camera = game.getCamera();
+        game.interactAt(camera.x + tileX, camera.y + tileY);
+      });
+
+      settingsButton.addEventListener("click", () => {
+        const isOpen = settingsPanel.style.display === "block";
+        settingsPanel.style.display = isOpen ? "none" : "block";
+        settingsPanel.setAttribute("aria-hidden", String(isOpen));
+      });
+
+      toggleMusicButton.addEventListener("click", () => {
+        game.toggleMusic();
+      });
+
+      clearSaveButton.addEventListener("click", () => {
+        game.clearSave();
+        window.location.reload();
+      });
+
       init();
 
       function loop(now) {

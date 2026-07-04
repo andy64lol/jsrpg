@@ -11,5 +11,9 @@
     },
     "map":{
         "tile_size": 8
+    },
+    "render_distance": 7, // ese es el base
+    "UI":{
+        "size": 1
     }
 }
