@@ -43,7 +43,6 @@
         display: block;
       }
 
-      /* ── HUD (hearts) ───────────────────────────────────────────── */
       .hud {
         position: fixed;
         top: 12px;
@@ -60,12 +59,11 @@
         height: 24px;
       }
 
-      /* ── Inventory bar ──────────────────────────────────────────── */
       .inventory {
         position: fixed;
         bottom: 12px;
         left: 12px;
-        display: none; /* hidden until I is pressed */
+        display: none; 
         flex-direction: row;
         gap: 4px;
         background: rgba(0, 0, 0, 0.75);
@@ -108,8 +106,6 @@
         image-rendering: pixelated;
         display: block;
       }
-
-      /* Fallback when no texture: show first letter of item name */
       .inventory-item-fallback {
         font-size: 18px;
         opacity: 0.7;
@@ -117,7 +113,6 @@
         font-family: "PixeloidMono", monospace;
       }
 
-      /* ── Inventory tooltip ──────────────────────────────────────── */
       .inventory-tooltip {
         position: fixed;
         z-index: 30;
@@ -151,8 +146,6 @@
         color: #7cffaa;
         font-size: 11px;
       }
-
-      /* ── Settings button (pixel-art image) ──────────────────────── */
       .settings-button {
         position: fixed;
         top: 12px;
@@ -162,22 +155,20 @@
         border: none;
         background: transparent;
         cursor: pointer;
-        /* no outline — the sprite itself communicates state */
         outline: none;
       }
 
       .settings-button img {
         display: block;
-        width: 64px;   /* 16px × 4 */
-        height: 64px;  /* 16px × 4 */
+        width: 64px;   
+        height: 64px;  
         image-rendering: crisp-edges;
         image-rendering: pixelated;
       }
 
-      /* ── Settings panel ─────────────────────────────────────────── */
       .settings-panel {
         position: fixed;
-        top: 84px;   /* 12px offset + 64px button + 8px gap */
+        top: 84px;   
         right: 12px;
         z-index: 20;
         width: 200px;
@@ -197,7 +188,6 @@
         letter-spacing: 0.05em;
       }
 
-      /* Image-based panel buttons (save / import) */
       .settings-img-btn {
         display: block;
         width: 100%;
@@ -211,13 +201,12 @@
       }
 
       .settings-img-btn img {
-        width: 128px;  /* 32px × 4 */
-        height: 64px;  /* 16px × 4 */
+        width: 128px;  
+        height: 64px;  
         image-rendering: crisp-edges;
         image-rendering: pixelated;
       }
 
-      /* Text-based panel buttons (toggle music, reset save) */
       .settings-text-btn {
         display: block;
         width: 100%;
@@ -242,13 +231,9 @@
         border-color: #ff5f5f;
         background: rgba(255, 95, 95, 0.15);
       }
-
-      /* Hidden file input for save import */
       #importFileInput {
         display: none;
       }
-
-      /* ── Message toast ──────────────────────────────────────────── */
       .message {
         position: fixed;
         bottom: 92px;
@@ -278,7 +263,6 @@
     <div id="message" class="message" aria-live="polite"></div>
     <div id="inventoryTooltip" class="inventory-tooltip" role="tooltip" aria-hidden="true"></div>
 
-    <!-- Settings toggle button — pixel-art sprite, swaps on hover -->
     <button id="settingsButton" class="settings-button" type="button" aria-label="Settings" title="Settings">
       <img id="settingsButtonImg"
            src="./assets/UI/buttons/settings.png"
@@ -287,11 +271,9 @@
            alt="Settings" />
     </button>
 
-    <!-- Settings panel -->
     <div id="settingsPanel" class="settings-panel" aria-hidden="true">
       <div class="settings-panel-title">Settings</div>
 
-      <!-- Download save — save.png sprite -->
       <button id="downloadSaveButton" class="settings-img-btn" type="button" aria-label="Download save file" title="Download save file">
         <img src="./assets/UI/buttons/save.png"
              data-normal="./assets/UI/buttons/save.png"
@@ -299,14 +281,12 @@
              alt="Download Save" />
       </button>
 
-      <!-- Import save — same sprite, different action -->
       <button id="importSaveButton" class="settings-img-btn" type="button" aria-label="Import save file" title="Import save file">
-        <img src="./assets/UI/buttons/save.png"
-             data-normal="./assets/UI/buttons/save.png"
-             data-hover="./assets/UI/buttons/save_hover.png"
+        <img src="./assets/UI/buttons/load.png"
+             data-normal="./assets/UI/buttons/load.png"
+             data-hover="./assets/UI/buttons/load_hover.png"
              alt="Import Save" />
       </button>
-      <!-- Hidden file picker triggered by importSaveButton -->
       <input type="file" id="importFileInput" accept=".json" />
 
       <button id="toggleMusicButton" class="settings-text-btn" type="button">Toggle Music</button>
@@ -327,7 +307,6 @@
         arrowright: true
       };
 
-      // ── Element refs ───────────────────────────────────────────────
       const canvas             = document.getElementById("game");
       const hud                = document.getElementById("hud");
       const inventory          = document.getElementById("inventory");
@@ -342,7 +321,6 @@
       const toggleMusicButton  = document.getElementById("toggleMusicButton");
       const clearSaveButton    = document.getElementById("clearSaveButton");
 
-      // ── Inventory open state ───────────────────────────────────────
       let inventoryOpen = false;
 
       function setInventoryOpen(open) {
@@ -352,7 +330,6 @@
         if (!open) { hideTooltip(); }
       }
 
-      // ── Inventory tooltip ──────────────────────────────────────────
       function hideTooltip() {
         inventoryTooltip.style.display = "none";
         inventoryTooltip.setAttribute("aria-hidden", "true");
@@ -371,7 +348,6 @@
         inventoryTooltip.style.display = "block";
         inventoryTooltip.setAttribute("aria-hidden", "false");
 
-        // Position above the slot; clamp to viewport
         const slotRect = slot.getBoundingClientRect();
         const tipW = inventoryTooltip.offsetWidth;
         const tipH = inventoryTooltip.offsetHeight;
@@ -384,7 +360,6 @@
         inventoryTooltip.style.top  = `${y}px`;
       }
 
-      // Event delegation — one listener covers all slots regardless of re-renders
       inventory.addEventListener("mouseover", (e) => {
         const slot = e.target.closest(".inventory-slot");
         if (slot) { showTooltip(slot); }
@@ -393,10 +368,7 @@
         if (!e.relatedTarget || !inventory.contains(e.relatedTarget)) { hideTooltip(); }
       });
 
-      // ── Game instance ──────────────────────────────────────────────
       const game = new Game(canvas, hud, inventory, messageElement);
-
-      // ── Init & loop ────────────────────────────────────────────────
       async function init() {
         try {
           await game.start("map1");
@@ -411,10 +383,6 @@
         game.draw();
         requestAnimationFrame(loop);
       }
-
-      // ── Sprite hover helper ────────────────────────────────────────
-      // All <img> tags with data-normal / data-hover inside a button
-      // automatically swap on pointer enter/leave.
       function attachHoverSprite(buttonEl) {
         const img = buttonEl.querySelector("img[data-hover]");
         if (!img) { return; }
@@ -424,7 +392,6 @@
         buttonEl.addEventListener("pointerleave", () => {
           img.src = img.dataset.normal;
         });
-        // Also reset if focus is lost without a leave event
         buttonEl.addEventListener("blur", () => {
           img.src = img.dataset.normal;
         });
@@ -434,14 +401,12 @@
       attachHoverSprite(downloadSaveBtn);
       attachHoverSprite(importSaveBtn);
 
-      // ── Settings panel toggle ──────────────────────────────────────
       settingsButton.addEventListener("click", () => {
         const isOpen = settingsPanel.style.display === "block";
         settingsPanel.style.display = isOpen ? "none" : "block";
         settingsPanel.setAttribute("aria-hidden", String(isOpen));
       });
 
-      // Close panel when clicking outside of it
       document.addEventListener("pointerdown", (e) => {
         if (settingsPanel.style.display !== "block") { return; }
         if (!settingsPanel.contains(e.target) && e.target !== settingsButton && !settingsButton.contains(e.target)) {
@@ -450,14 +415,12 @@
         }
       });
 
-      // ── Save download ──────────────────────────────────────────────
       downloadSaveBtn.addEventListener("click", () => {
         game.downloadSave();
       });
 
-      // ── Save import ────────────────────────────────────────────────
       importSaveBtn.addEventListener("click", () => {
-        importFileInput.value = "";   // reset so same file can be re-imported
+        importFileInput.value = "";  
         importFileInput.click();
       });
 
@@ -468,18 +431,18 @@
         }
       });
 
-      // ── Music toggle ───────────────────────────────────────────────
       toggleMusicButton.addEventListener("click", () => {
         game.toggleMusic();
       });
 
-      // ── Reset save ─────────────────────────────────────────────────
+      
       clearSaveButton.addEventListener("click", () => {
         game.clearSave();
         window.location.reload();
       });
 
-      // ── Keyboard input ─────────────────────────────────────────────
+
+
       window.addEventListener("keydown", event => {
         if (event.defaultPrevented) { return; }
         const key = event.key.toLowerCase();
@@ -490,14 +453,12 @@
           return;
         }
 
-        // I — toggle inventory open / closed
         if (key === "i") {
           event.preventDefault();
           setInventoryOpen(!inventoryOpen);
           return;
         }
 
-        // Escape — close inventory if open
         if (key === "escape" && inventoryOpen) {
           event.preventDefault();
           setInventoryOpen(false);
@@ -537,7 +498,6 @@
         }
       });
 
-      // ── Canvas click → tile interaction ───────────────────────────
       canvas.addEventListener("click", event => {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
