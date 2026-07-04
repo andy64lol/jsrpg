@@ -43,6 +43,7 @@
         display: block;
       }
 
+      /* ── HUD (hearts) ───────────────────────────────────────────── */
       .hud {
         position: fixed;
         top: 12px;
@@ -59,27 +60,40 @@
         height: 24px;
       }
 
+      /* ── Inventory bar ──────────────────────────────────────────── */
       .inventory {
         position: fixed;
         bottom: 12px;
         left: 12px;
-        display: flex;
-        gap: 6px;
-        background: rgba(0, 0, 0, 0.65);
+        display: none; /* hidden until I is pressed */
+        flex-direction: row;
+        gap: 4px;
+        background: rgba(0, 0, 0, 0.75);
         border: 1px solid #5f7cff;
         border-radius: 8px;
-        padding: 8px;
+        padding: 6px;
         z-index: 10;
-        color: #edf2ff;
-        font-size: 14px;
+      }
+
+      .inventory.open {
+        display: flex;
       }
 
       .inventory-slot {
-        padding: 6px 10px;
-        border: 1px solid #ffffff33;
+        width: 44px;
+        height: 44px;
+        border: 2px solid #ffffff22;
         border-radius: 6px;
-        min-width: 76px;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: default;
+        flex-shrink: 0;
+        transition: border-color 0.1s;
+      }
+
+      .inventory-slot:hover {
+        border-color: #ffffff55;
       }
 
       .inventory-slot.selected {
@@ -87,30 +101,86 @@
         background: rgba(95, 124, 255, 0.24);
       }
 
-      .inventory-empty {
-        opacity: 0.75;
+      .inventory-item-icon {
+        width: 32px;
+        height: 32px;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+        display: block;
       }
 
+      /* Fallback when no texture: show first letter of item name */
+      .inventory-item-fallback {
+        font-size: 18px;
+        opacity: 0.7;
+        color: #edf2ff;
+        font-family: "PixeloidMono", monospace;
+      }
+
+      /* ── Inventory tooltip ──────────────────────────────────────── */
+      .inventory-tooltip {
+        position: fixed;
+        z-index: 30;
+        background: rgba(0, 0, 0, 0.92);
+        border: 1px solid #5f7cff;
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: #edf2ff;
+        font-family: "PixeloidMono", monospace, system-ui, sans-serif;
+        font-size: 12px;
+        pointer-events: none;
+        display: none;
+        max-width: 200px;
+        line-height: 1.5;
+      }
+
+      .inventory-tooltip-name {
+        color: #fff;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+
+      .inventory-tooltip-desc {
+        color: #c0cbff;
+        font-size: 11px;
+        margin-bottom: 4px;
+        opacity: 0.85;
+      }
+
+      .inventory-tooltip-stat {
+        color: #7cffaa;
+        font-size: 11px;
+      }
+
+      /* ── Settings button (pixel-art image) ──────────────────────── */
       .settings-button {
         position: fixed;
         top: 12px;
         right: 12px;
         z-index: 20;
-        padding: 8px 12px;
-        border: 1px solid #edf2ff88;
-        border-radius: 8px;
-        background: rgba(0, 0, 0, 0.75);
-        color: #edf2ff;
+        padding: 0;
+        border: none;
+        background: transparent;
         cursor: pointer;
-        font-family: "PixeloidMono", monospace, system-ui, sans-serif;
+        /* no outline — the sprite itself communicates state */
+        outline: none;
       }
 
+      .settings-button img {
+        display: block;
+        width: 64px;   /* 16px × 4 */
+        height: 64px;  /* 16px × 4 */
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+      }
+
+      /* ── Settings panel ─────────────────────────────────────────── */
       .settings-panel {
         position: fixed;
-        top: 52px;
+        top: 84px;   /* 12px offset + 64px button + 8px gap */
         right: 12px;
         z-index: 20;
-        width: 220px;
+        width: 200px;
         background: rgba(0, 0, 0, 0.95);
         border: 1px solid #5f7cff;
         border-radius: 10px;
@@ -120,22 +190,65 @@
         font-size: 13px;
       }
 
-      .settings-panel button {
+      .settings-panel-title {
+        text-align: center;
+        margin-bottom: 10px;
+        opacity: 0.7;
+        letter-spacing: 0.05em;
+      }
+
+      /* Image-based panel buttons (save / import) */
+      .settings-img-btn {
+        display: block;
+        width: 100%;
+        padding: 0;
+        margin-top: 8px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        outline: none;
+        text-align: center;
+      }
+
+      .settings-img-btn img {
+        width: 128px;  /* 32px × 4 */
+        height: 64px;  /* 16px × 4 */
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+      }
+
+      /* Text-based panel buttons (toggle music, reset save) */
+      .settings-text-btn {
+        display: block;
         width: 100%;
         margin-top: 8px;
         padding: 8px;
-        border: 1px solid #edf2ff55;
+        border: 1px solid #edf2ff33;
         border-radius: 6px;
         background: rgba(255, 255, 255, 0.06);
         color: #edf2ff;
         cursor: pointer;
         font-family: "PixeloidMono", monospace, system-ui, sans-serif;
+        font-size: 12px;
+        transition: border-color 0.1s, background 0.1s;
       }
 
-      .settings-panel button:hover {
+      .settings-text-btn:hover {
         border-color: #5f7cff;
+        background: rgba(95, 124, 255, 0.15);
       }
 
+      .settings-text-btn.danger:hover {
+        border-color: #ff5f5f;
+        background: rgba(255, 95, 95, 0.15);
+      }
+
+      /* Hidden file input for save import */
+      #importFileInput {
+        display: none;
+      }
+
+      /* ── Message toast ──────────────────────────────────────────── */
       .message {
         position: fixed;
         bottom: 92px;
@@ -161,15 +274,48 @@
       <div id="hud" class="hud" aria-label="health display"></div>
       <div id="inventory" class="inventory" aria-label="inventory display"></div>
     </div>
+
     <div id="message" class="message" aria-live="polite"></div>
-    <button id="settingsButton" class="settings-button" type="button">Settings</button>
+    <div id="inventoryTooltip" class="inventory-tooltip" role="tooltip" aria-hidden="true"></div>
+
+    <!-- Settings toggle button — pixel-art sprite, swaps on hover -->
+    <button id="settingsButton" class="settings-button" type="button" aria-label="Settings" title="Settings">
+      <img id="settingsButtonImg"
+           src="./assets/UI/buttons/settings.png"
+           data-normal="./assets/UI/buttons/settings.png"
+           data-hover="./assets/UI/buttons/settings_hover.png"
+           alt="Settings" />
+    </button>
+
+    <!-- Settings panel -->
     <div id="settingsPanel" class="settings-panel" aria-hidden="true">
-      <div>Settings</div>
-      <button id="toggleMusicButton" type="button">Toggle Music</button>
-      <button id="clearSaveButton" type="button">Reset Save</button>
+      <div class="settings-panel-title">Settings</div>
+
+      <!-- Download save — save.png sprite -->
+      <button id="downloadSaveButton" class="settings-img-btn" type="button" aria-label="Download save file" title="Download save file">
+        <img src="./assets/UI/buttons/save.png"
+             data-normal="./assets/UI/buttons/save.png"
+             data-hover="./assets/UI/buttons/save_hover.png"
+             alt="Download Save" />
+      </button>
+
+      <!-- Import save — same sprite, different action -->
+      <button id="importSaveButton" class="settings-img-btn" type="button" aria-label="Import save file" title="Import save file">
+        <img src="./assets/UI/buttons/save.png"
+             data-normal="./assets/UI/buttons/save.png"
+             data-hover="./assets/UI/buttons/save_hover.png"
+             alt="Import Save" />
+      </button>
+      <!-- Hidden file picker triggered by importSaveButton -->
+      <input type="file" id="importFileInput" accept=".json" />
+
+      <button id="toggleMusicButton" class="settings-text-btn" type="button">Toggle Music</button>
+      <button id="clearSaveButton" class="settings-text-btn danger" type="button">Reset Save</button>
     </div>
+
     <script type="module">
       import Game from "./engine/index.js";
+
       const KEY_DIRECTIONS = {
         w: true,
         arrowup: true,
@@ -180,30 +326,181 @@
         d: true,
         arrowright: true
       };
-      const canvas = document.getElementById("game");
-      const hud = document.getElementById("hud");
-      const inventory = document.getElementById("inventory");
-      const messageElement = document.getElementById("message");
-      const settingsButton = document.getElementById("settingsButton");
-      const settingsPanel = document.getElementById("settingsPanel");
-      const toggleMusicButton = document.getElementById("toggleMusicButton");
-      const clearSaveButton = document.getElementById("clearSaveButton");
+
+      // ── Element refs ───────────────────────────────────────────────
+      const canvas             = document.getElementById("game");
+      const hud                = document.getElementById("hud");
+      const inventory          = document.getElementById("inventory");
+      const inventoryTooltip   = document.getElementById("inventoryTooltip");
+      const messageElement     = document.getElementById("message");
+      const settingsButton     = document.getElementById("settingsButton");
+      const settingsButtonImg  = document.getElementById("settingsButtonImg");
+      const settingsPanel      = document.getElementById("settingsPanel");
+      const downloadSaveBtn    = document.getElementById("downloadSaveButton");
+      const importSaveBtn      = document.getElementById("importSaveButton");
+      const importFileInput    = document.getElementById("importFileInput");
+      const toggleMusicButton  = document.getElementById("toggleMusicButton");
+      const clearSaveButton    = document.getElementById("clearSaveButton");
+
+      // ── Inventory open state ───────────────────────────────────────
+      let inventoryOpen = false;
+
+      function setInventoryOpen(open) {
+        inventoryOpen = open;
+        inventory.classList.toggle("open", open);
+        inventory.setAttribute("aria-hidden", String(!open));
+        if (!open) { hideTooltip(); }
+      }
+
+      // ── Inventory tooltip ──────────────────────────────────────────
+      function hideTooltip() {
+        inventoryTooltip.style.display = "none";
+        inventoryTooltip.setAttribute("aria-hidden", "true");
+      }
+
+      function showTooltip(slot) {
+        const name = slot.dataset.name || "";
+        const desc = slot.dataset.desc || "";
+        const stat = slot.dataset.stat || "";
+        if (!name && !desc && !stat) { return; }
+
+        inventoryTooltip.innerHTML =
+          (name ? `<div class="inventory-tooltip-name">${name}</div>` : "") +
+          (desc ? `<div class="inventory-tooltip-desc">${desc}</div>`  : "") +
+          (stat ? `<div class="inventory-tooltip-stat">${stat}</div>`  : "");
+        inventoryTooltip.style.display = "block";
+        inventoryTooltip.setAttribute("aria-hidden", "false");
+
+        // Position above the slot; clamp to viewport
+        const slotRect = slot.getBoundingClientRect();
+        const tipW = inventoryTooltip.offsetWidth;
+        const tipH = inventoryTooltip.offsetHeight;
+        let x = slotRect.left + slotRect.width / 2 - tipW / 2;
+        let y = slotRect.top  - tipH - 8;
+        if (y < 8) { y = slotRect.bottom + 8; }
+        x = Math.max(8, Math.min(x, window.innerWidth  - tipW - 8));
+        y = Math.max(8, Math.min(y, window.innerHeight - tipH - 8));
+        inventoryTooltip.style.left = `${x}px`;
+        inventoryTooltip.style.top  = `${y}px`;
+      }
+
+      // Event delegation — one listener covers all slots regardless of re-renders
+      inventory.addEventListener("mouseover", (e) => {
+        const slot = e.target.closest(".inventory-slot");
+        if (slot) { showTooltip(slot); }
+      });
+      inventory.addEventListener("mouseout", (e) => {
+        if (!e.relatedTarget || !inventory.contains(e.relatedTarget)) { hideTooltip(); }
+      });
+
+      // ── Game instance ──────────────────────────────────────────────
       const game = new Game(canvas, hud, inventory, messageElement);
+
+      // ── Init & loop ────────────────────────────────────────────────
       async function init() {
         try {
           await game.start("map1");
           requestAnimationFrame(loop);
-        } catch (error) {
-          console.error(error);
+        } catch (err) {
+          console.error(err);
         }
       }
+
+      function loop(now) {
+        game.update(now);
+        game.draw();
+        requestAnimationFrame(loop);
+      }
+
+      // ── Sprite hover helper ────────────────────────────────────────
+      // All <img> tags with data-normal / data-hover inside a button
+      // automatically swap on pointer enter/leave.
+      function attachHoverSprite(buttonEl) {
+        const img = buttonEl.querySelector("img[data-hover]");
+        if (!img) { return; }
+        buttonEl.addEventListener("pointerenter", () => {
+          img.src = img.dataset.hover;
+        });
+        buttonEl.addEventListener("pointerleave", () => {
+          img.src = img.dataset.normal;
+        });
+        // Also reset if focus is lost without a leave event
+        buttonEl.addEventListener("blur", () => {
+          img.src = img.dataset.normal;
+        });
+      }
+
+      attachHoverSprite(settingsButton);
+      attachHoverSprite(downloadSaveBtn);
+      attachHoverSprite(importSaveBtn);
+
+      // ── Settings panel toggle ──────────────────────────────────────
+      settingsButton.addEventListener("click", () => {
+        const isOpen = settingsPanel.style.display === "block";
+        settingsPanel.style.display = isOpen ? "none" : "block";
+        settingsPanel.setAttribute("aria-hidden", String(isOpen));
+      });
+
+      // Close panel when clicking outside of it
+      document.addEventListener("pointerdown", (e) => {
+        if (settingsPanel.style.display !== "block") { return; }
+        if (!settingsPanel.contains(e.target) && e.target !== settingsButton && !settingsButton.contains(e.target)) {
+          settingsPanel.style.display = "none";
+          settingsPanel.setAttribute("aria-hidden", "true");
+        }
+      });
+
+      // ── Save download ──────────────────────────────────────────────
+      downloadSaveBtn.addEventListener("click", () => {
+        game.downloadSave();
+      });
+
+      // ── Save import ────────────────────────────────────────────────
+      importSaveBtn.addEventListener("click", () => {
+        importFileInput.value = "";   // reset so same file can be re-imported
+        importFileInput.click();
+      });
+
+      importFileInput.addEventListener("change", () => {
+        const file = importFileInput.files[0];
+        if (file) {
+          game.importSave(file);
+        }
+      });
+
+      // ── Music toggle ───────────────────────────────────────────────
+      toggleMusicButton.addEventListener("click", () => {
+        game.toggleMusic();
+      });
+
+      // ── Reset save ─────────────────────────────────────────────────
+      clearSaveButton.addEventListener("click", () => {
+        game.clearSave();
+        window.location.reload();
+      });
+
+      // ── Keyboard input ─────────────────────────────────────────────
       window.addEventListener("keydown", event => {
-        if (event.defaultPrevented) return;
+        if (event.defaultPrevented) { return; }
         const key = event.key.toLowerCase();
 
         if (KEY_DIRECTIONS[key]) {
           event.preventDefault();
           game.setMoveKey(key, true);
+          return;
+        }
+
+        // I — toggle inventory open / closed
+        if (key === "i") {
+          event.preventDefault();
+          setInventoryOpen(!inventoryOpen);
+          return;
+        }
+
+        // Escape — close inventory if open
+        if (key === "escape" && inventoryOpen) {
+          event.preventDefault();
+          setInventoryOpen(false);
           return;
         }
 
@@ -231,6 +528,7 @@
           return;
         }
       });
+
       window.addEventListener("keyup", event => {
         const key = event.key.toLowerCase();
         if (KEY_DIRECTIONS[key]) {
@@ -239,6 +537,7 @@
         }
       });
 
+      // ── Canvas click → tile interaction ───────────────────────────
       canvas.addEventListener("click", event => {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
@@ -251,28 +550,7 @@
         game.interactAt(camera.x + tileX, camera.y + tileY);
       });
 
-      settingsButton.addEventListener("click", () => {
-        const isOpen = settingsPanel.style.display === "block";
-        settingsPanel.style.display = isOpen ? "none" : "block";
-        settingsPanel.setAttribute("aria-hidden", String(isOpen));
-      });
-
-      toggleMusicButton.addEventListener("click", () => {
-        game.toggleMusic();
-      });
-
-      clearSaveButton.addEventListener("click", () => {
-        game.clearSave();
-        window.location.reload();
-      });
-
       init();
-
-      function loop(now) {
-        game.update(now);
-        game.draw();
-        requestAnimationFrame(loop);
-      }
     </script>
   </body>
 
