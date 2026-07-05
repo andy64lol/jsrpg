@@ -1,0 +1,286 @@
+===============================================================
+  JSRPG -- Documentación no definitiva (puede que haya cambios o que algunas cosas no estén del todo añadidas)
+  (vanilla JS, sin bundler, tiles de 8x8 px)
+===============================================================
+
+
+─────────────────────────────────────────
+  ESTRUCTURA DE ARCHIVOS
+─────────────────────────────────────────
+
+src/
+  index.html            -- punto de entrada del juego
+  engine/
+    index.js            -- clase Game (bucle, input, render)
+    map.js              -- cargador de mapas
+    player.js           -- movimiento y colisión del jugador
+    entity.js           -- entidades enemigas (IA, spawn)
+    json.js             -- parser de JSONC / JSON5 / JSON
+    save_load.js        -- guardado en localStorage
+    debug.js            -- sistema de logs con prefijo [JSRPG]
+    config.jsonc        -- velocidad, tamaño de tile, viewport
+    items.jsonc         -- definición de items consumibles
+  assets/
+    tiles/              -- sprites de tiles (8x8 px, PNG)
+    sprites/
+      player/           -- izquierda, derecha, muertos
+      enemy/            -- sprites de enemigos
+    UI/                 -- corazones, botones, fuente
+    sounds/
+      soundconfig.jsonc -- mapea nombre de mapa → archivo de música
+  maps/
+    map1/               -- carpeta de un mapa
+    map2/
+    map3/
+
+docs/
+  documentation.txt     -- este archivo
+
+
+─────────────────────────────────────────
+  CONTROLES
+─────────────────────────────────────────
+
+  WASD / Flechas    Mover al jugador
+  X                 Atacar al enemigo de enfrente (izq/der)
+  F                 Interactuar con el tile de enfrente
+                    (fuentes, cofres, puertas...)
+  E                 Usar el item seleccionado del inventario
+  [ / ]             Cambiar item seleccionado
+  I                 Abrir/cerrar inventario
+
+
+─────────────────────────────────────────
+  CREAR UN MAPA NUEVO
+─────────────────────────────────────────
+
+1. Crea una carpeta dentro de src/maps/, por ejemplo:
+       src/maps/mi_mapa/
+
+2. Dentro crea estos tres archivos:
+
+   map.csv          -- tiles visuales (IDs numéricos)
+   collisions.csv   -- lógica del tile (colisiones, colocación de entidades, eventos...)
+   definitions.jsonc -- definiciónes de IDs, entidades, etc.
+
+   Los tres deben tener la misma cantidad de filas y columnas.
+   El separador es coma. No se permiten espacios extra.
+
+3. Ejemplo mínimo de map.csv (5x5) si 1 es pared y 0 es suelo:
+
+   1,1,1,1,1
+   1,0,0,0,1
+   1,0,0,0,1
+   1,0,0,0,1
+   1,1,1,1,1
+
+4. collisions.csv puedes no usar los mismos IDs que definiste en map.csv para lógica:
+
+   1,1,1,1,1
+   1,2,0,0,1
+   1,0,0,0,1
+   1,0,0,0,1
+   0,0,0,0,0
+
+   (el ID "2" podría ser player_spawn, ver abajo)
+   P.D: Sí se que se ve bien raro tener paredes transpasables pero bueno es para un ejempo en un juego real estaría bien raro a menos de que eres de meter secretos
+5. definitions.jsonc define qué significa cada ID:
+
+   { // en jsonc puedes usar comentarios
+       "tiles": {
+           "0": "assets/tiles/suelo.png",
+           "1": "assets/tiles/pared.png"
+       },
+       "collisions": {
+           "0": { "type": "air" },
+           "1": { "type": "solid" },
+           "2": { "type": "player_spawn" }
+       }
+   }
+
+
+─────────────────────────────────────────
+  TIPOS DE COLISIÓN (type)
+─────────────────────────────────────────
+
+  air             Tile vacío, pisable (el jugador puede estar aquí)
+  solid           Bloqueante, el jugador no puede entrar
+  player_spawn    Posición inicial del jugador (solo uno por mapa)
+  door            Warp a otro mapa. Campos extra obligatorios:
+                    "target_map": "nombre_del_mapa"
+                    "target_tile": { "x": N, "y": N }
+  heal            Fuente de curación interactiva. Campos:
+                    "heals": N          -- cuánto cura
+                    "infinity": true    -- si es infinita
+                    "solid": true       -- si bloquea el paso
+                    "afterInteractText": "texto que aparece"
+  chest           Cofre con un item. Campos:
+                    "contains": "id_del_item"
+                    "afterOpeningCollision": N  -- nuevo ID tras abrirlo
+                    "afterOpeningTile": N        -- nuevo tile visual
+                    "afterInteractText": "texto"
+  player_damage   Tile que hace daño al pisarlo:
+                    "damage": N         -- cantidad de daño
+  entity_spawn    Punto de spawn de un enemigo. Campos:
+                    "entity": "nombre"  -- nombre en definitions.entities
+                    "patrol": [[x,y],[x,y],...] (opcional)
+                    "floorCollision": N (opcional, qué ID deja al despawn)
+
+
+─────────────────────────────────────────
+  DEFINIR ENTIDADES (enemigos)
+─────────────────────────────────────────
+
+En el definitions.jsonc del mapa añade una sección "entities":
+
+  {
+      "tiles": { ... },
+      "collisions": {
+          ...
+          "5": { "type": "entity_spawn", "entity": "slime" }
+      },
+      "entities": {
+          "slime": {
+              "sprite":      "assets/sprites/enemy/slime.png",
+              "health":      4,
+              "damage":      2,
+              "speed":       0.8,
+              "behavior":    "patrol",
+              "chaseRadius": 5
+          }
+      }
+  }
+
+  Campos de una entidad:
+    sprite       Ruta al PNG (relativa a src/)
+    health       Puntos de vida
+    damage       Daño por contacto (adyacente al jugador)
+    speed        Tiles por segundo que se mueve
+    behavior     "patrol" (patrulla y persigue si el jugador está cerca)
+                 "chase"  (persigue siempre)
+    chaseRadius  Distancia (manhattan) a la que empieza a perseguir
+
+  Patrulla personalizada -- añadir "patrol" en el tile de spawn:
+      "5": {
+          "type":   "entity_spawn",
+          "entity": "slime",
+          "patrol": [[2,3],[6,3],[6,5]]
+      }
+  Si no se define, patrulla 2 tiles a la derecha del spawn y vuelve.
+
+  La entidad NO puede pisar el tile del jugador.
+  Hace daño cuando está en un tile adyacente (no diagonal).
+  Cada golpe tiene un cooldown de 1.5 segundos.
+
+
+─────────────────────────────────────────
+  DEFINIR ITEMS
+─────────────────────────────────────────
+
+Edita src/engine/items.jsonc:
+
+  {
+      "miItem": {
+          "name":        "Nombre visible",
+          "description": "Descripción del item",
+          "texture":     "assets/sprites/items/mi_item.png",
+          "type":        "consumable",
+          "effect": {
+              "heal": 5
+          }
+      }
+  }
+
+  Para que aparezca en el juego, ponlo en un cofre:
+      "contains": "miItem"
+
+
+─────────────────────────────────────────
+  CONFIGURACIÓN GENERAL (config.jsonc)
+─────────────────────────────────────────
+
+  src/engine/config.jsonc controla:
+
+    player.speed          Velocidad del jugador (tiles/seg)
+    player.gliding        Duración de la animación de movimiento
+    player.hearts         HP máximo (2 hp = 1 corazón en la UI)
+    map.tile_size         Tamaño de cada tile en píxeles (por defecto 8)
+    map.viewport_width    Ancho del viewport en tiles (por defecto 10)
+    map.viewport_height   Alto del viewport en tiles (por defecto 10)
+
+
+─────────────────────────────────────────
+  MÚSICA Y SONIDO (soundconfig.jsonc)
+─────────────────────────────────────────
+
+  Edita src/assets/sounds/soundconfig.jsonc:
+
+  {
+      "BGM": {
+          "map1": "mi_musica.ogg",
+          "map2": "otra_musica.ogg"
+      },
+      "player": {
+          "receive_damage": "damage.ogg"
+      }
+  }
+
+  Los archivos de sonido van en src/assets/sounds/.
+  Se recomienda OGG para compatibilidad web.
+
+
+─────────────────────────────────────────
+  FORMATO DE ARCHIVOS JSON
+─────────────────────────────────────────
+
+  El motor acepta tres formatos:
+    .jsonc   -- JSON con comentarios // y /* */
+    .json5   -- JSON5 (mismas extensiones de jsonc más o menos)
+    .json    -- JSON estándar
+
+  También se toleran comas al final de arrays/objetos:
+      { "a": 1, "b": 2, }   <-- esto funciona
+
+  El motor prueba los tres formatos en orden si solo
+  encuentra uno de ellos. Puedes usar el que prefieras.
+
+
+─────────────────────────────────────────
+  DEBUG
+─────────────────────────────────────────
+
+  Abre la consola del navegador y escribe:
+      window.__JSRPG_DEBUG = true
+
+  Esto activa logs detallados con prefijo [JSRPG].
+  Todos los módulos tienen logs de debug, info y warn.
+
+
+─────────────────────────────────────────
+  LINTING
+─────────────────────────────────────────
+
+  npx eslint src/engine/*.js
+
+  Reglas activas: prefer-const, no-var, eqeqeq, curly
+
+
+─────────────────────────────────────────
+  NOTAS ADICIONALES
+─────────────────────────────────────────
+
+  * Los IDs de tiles son LOCALES a cada mapa. El ID "3" en map1
+    puede significar una puerta, y en map2 puede ser otra cosa.
+
+  * Solo puede haber UN tile de tipo "player_spawn" por mapa.
+    Si hay dos, el motor lanzará un error.
+
+  * Los cambios al mapa (cofres abiertos, tiles modificados)
+    se guardan en localStorage junto con la posición del jugador.
+
+  * El guardado es automático. Para resetear: Settings → Reset Save.
+
+  * El servidor de desarrollo no cachea archivos (Python http.server
+    con cabeceras no-cache), así que los cambios se ven al recargar.
+
+===============================================================

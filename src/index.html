@@ -6,9 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JSRPG demo</title>
     <style>
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
       @font-face {
         font-family: "PixeloidMono";
@@ -43,7 +41,8 @@
         display: block;
       }
 
-      .hud {
+      
+.hud {
         position: fixed;
         top: 12px;
         left: 12px;
@@ -52,100 +51,12 @@
         pointer-events: none;
         z-index: 10;
       }
-
       .hud-heart {
         display: block;
         width: 24px;
         height: 24px;
       }
 
-      .inventory {
-        position: fixed;
-        bottom: 12px;
-        left: 12px;
-        display: none; 
-        flex-direction: row;
-        gap: 4px;
-        background: rgba(0, 0, 0, 0.75);
-        border: 1px solid #5f7cff;
-        border-radius: 8px;
-        padding: 6px;
-        z-index: 10;
-      }
-
-      .inventory.open {
-        display: flex;
-      }
-
-      .inventory-slot {
-        width: 44px;
-        height: 44px;
-        border: 2px solid #ffffff22;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: default;
-        flex-shrink: 0;
-        transition: border-color 0.1s;
-      }
-
-      .inventory-slot:hover {
-        border-color: #ffffff55;
-      }
-
-      .inventory-slot.selected {
-        border-color: #5f7cff;
-        background: rgba(95, 124, 255, 0.24);
-      }
-
-      .inventory-item-icon {
-        width: 32px;
-        height: 32px;
-        image-rendering: crisp-edges;
-        image-rendering: pixelated;
-        display: block;
-      }
-      .inventory-item-fallback {
-        font-size: 18px;
-        opacity: 0.7;
-        color: #edf2ff;
-        font-family: "PixeloidMono", monospace;
-      }
-
-      .inventory-tooltip {
-        position: fixed;
-        z-index: 30;
-        background: rgba(0, 0, 0, 0.92);
-        border: 1px solid #5f7cff;
-        border-radius: 8px;
-        padding: 8px 12px;
-        color: #edf2ff;
-        font-family: "PixeloidMono", monospace, system-ui, sans-serif;
-        font-size: 12px;
-        pointer-events: none;
-        display: none;
-        max-width: 200px;
-        line-height: 1.5;
-      }
-
-      .inventory-tooltip-name {
-        color: #fff;
-        font-size: 13px;
-        margin-bottom: 4px;
-      }
-
-      .inventory-tooltip-desc {
-        color: #c0cbff;
-        font-size: 11px;
-        margin-bottom: 4px;
-        opacity: 0.85;
-      }
-
-      .inventory-tooltip-stat {
-        color: #7cffaa;
-        font-size: 11px;
-      }
       .settings-button {
         position: fixed;
         top: 12px;
@@ -156,23 +67,22 @@
         background: transparent;
         cursor: pointer;
         outline: none;
-      }
 
+      }
       .settings-button img {
         display: block;
-        width: 64px;   
-        height: 64px;  
+        width: 64px;
+        height: 64px;
         image-rendering: crisp-edges;
         image-rendering: pixelated;
       }
-
       .settings-panel {
         position: fixed;
-        top: 84px;   
+        top: 84px;
         right: 12px;
         z-index: 20;
         width: 200px;
-        background: rgba(0, 0, 0, 0.95);
+        background: rgba(0,0,0,0.95);
         border: 1px solid #5f7cff;
         border-radius: 10px;
         padding: 12px;
@@ -180,14 +90,12 @@
         display: none;
         font-size: 13px;
       }
-
       .settings-panel-title {
         text-align: center;
         margin-bottom: 10px;
         opacity: 0.7;
         letter-spacing: 0.05em;
       }
-
       .settings-img-btn {
         display: block;
         width: 100%;
@@ -199,14 +107,12 @@
         outline: none;
         text-align: center;
       }
-
       .settings-img-btn img {
-        width: 128px;  
-        height: 64px;  
+        width: 128px;
+        height: 64px;
         image-rendering: crisp-edges;
         image-rendering: pixelated;
       }
-
       .settings-text-btn {
         display: block;
         width: 100%;
@@ -214,41 +120,220 @@
         padding: 8px;
         border: 1px solid #edf2ff33;
         border-radius: 6px;
-        background: rgba(255, 255, 255, 0.06);
+        background: rgba(255,255,255,0.06);
         color: #edf2ff;
         cursor: pointer;
         font-family: "PixeloidMono", monospace, system-ui, sans-serif;
         font-size: 12px;
         transition: border-color 0.1s, background 0.1s;
       }
+      .settings-text-btn:hover { border-color: #5f7cff; background: rgba(95,124,255,0.15); }
+      .settings-text-btn.danger:hover { border-color: #ff5f5f; background: rgba(255,95,95,0.15); }
+      #importFileInput { display: none; }
 
-      .settings-text-btn:hover {
-        border-color: #5f7cff;
-        background: rgba(95, 124, 255, 0.15);
-      }
-
-      .settings-text-btn.danger:hover {
-        border-color: #ff5f5f;
-        background: rgba(255, 95, 95, 0.15);
-      }
-      #importFileInput {
-        display: none;
-      }
       .message {
         position: fixed;
-        bottom: 92px;
-        left: 12px;
-        padding: 10px 14px;
-        background: rgba(0, 0, 0, 0.85);
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 18px;
+        background: rgba(0,0,0,0.88);
         border: 1px solid #5f7cff;
         border-radius: 8px;
         color: #edf2ff;
         font-family: "PixeloidMono", monospace, system-ui, sans-serif;
-        font-size: 14px;
+        font-size: 13px;
         z-index: 15;
         opacity: 0;
         transition: opacity 0.2s ease;
         pointer-events: none;
+        white-space: nowrap;
+      }
+
+      .inv-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.72);
+        backdrop-filter: blur(2px);
+      }
+      .inv-overlay.open { display: flex; }
+
+      .inv-panel {
+        width: 540px;
+        background: #0d0f1a;
+        border: 2px solid #5f7cff;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(95,124,255,0.25), 0 8px 32px rgba(0,0,0,0.6);
+      }
+
+      .inv-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px 10px;
+        border-bottom: 1px solid rgba(95,124,255,0.3);
+      }
+      .inv-title {
+        font-size: 14px;
+        letter-spacing: 0.12em;
+        color: #a0b0ff;
+        text-transform: uppercase;
+      }
+      .inv-header-hint {
+        font-size: 10px;
+        color: rgba(255,255,255,0.3);
+      }
+
+      .inv-body {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .inv-grid-wrap {
+        flex: 1;
+        padding: 14px;
+        overflow-y: auto;
+      }
+      .inv-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 72px);
+        gap: 8px;
+      }
+
+      .inv-slot {
+        width: 72px;
+        height: 72px;
+        border: 2px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        background: rgba(255,255,255,0.03);
+        transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
+        position: relative;
+      }
+      .inv-slot:hover {
+        border-color: rgba(95,124,255,0.55);
+        background: rgba(95,124,255,0.1);
+      }
+      .inv-slot.selected {
+        border-color: #5f7cff;
+        background: rgba(95,124,255,0.2);
+        box-shadow: 0 0 10px rgba(95,124,255,0.35);
+      }
+      .inv-slot-icon {
+        width: 48px;
+        height: 48px;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+        display: block;
+      }
+      .inv-slot-fallback {
+        font-size: 22px;
+        color: #edf2ff;
+        opacity: 0.6;
+      }
+
+      .inv-empty-msg {
+        grid-column: 1 / -1;
+        padding: 32px 0;
+        text-align: center;
+        font-size: 11px;
+        color: rgba(255,255,255,0.25);
+        letter-spacing: 0.06em;
+      }
+
+      .inv-detail {
+        width: 170px;
+        min-width: 170px;
+        border-left: 1px solid rgba(95,124,255,0.2);
+        padding: 18px 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        background: rgba(95,124,255,0.04);
+      }
+      .inv-detail-icon {
+        width: 64px;
+        height: 64px;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 6px;
+        background: rgba(0,0,0,0.3);
+      }
+      .inv-detail-name {
+        font-size: 12px;
+        color: #fff;
+        text-align: center;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+      .inv-detail-desc {
+        font-size: 10px;
+        color: #a8b4ff;
+        text-align: center;
+        opacity: 0.85;
+        line-height: 1.5;
+      }
+      .inv-detail-stat {
+        font-size: 11px;
+        color: #7cffaa;
+        text-align: center;
+      }
+      .inv-detail-placeholder {
+        font-size: 10px;
+        color: rgba(255,255,255,0.2);
+        text-align: center;
+        margin-top: auto;
+        line-height: 1.6;
+      }
+      .inv-detail-use {
+        margin-top: auto;
+        font-size: 10px;
+        color: rgba(255,255,255,0.35);
+        text-align: center;
+      }
+
+
+
+      .inv-footer {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        padding: 10px 16px;
+        border-top: 1px solid rgba(95,124,255,0.2);
+        background: rgba(0,0,0,0.2);
+      }
+      .inv-footer-hint {
+        font-size: 10px;
+        color: rgba(255,255,255,0.3);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .inv-kbd {
+        display: inline-block;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 3px;
+        padding: 1px 5px;
+        font-family: "PixeloidMono", monospace;
+        font-size: 9px;
+        color: #c0cbff;
+        line-height: 1.4;
       }
     </style>
   </head>
@@ -257,11 +342,36 @@
     <div class="game-container">
       <canvas id="game" width="56" height="56" aria-label="RPG game window"></canvas>
       <div id="hud" class="hud" aria-label="health display"></div>
-      <div id="inventory" class="inventory" aria-label="inventory display"></div>
     </div>
 
     <div id="message" class="message" aria-live="polite"></div>
-    <div id="inventoryTooltip" class="inventory-tooltip" role="tooltip" aria-hidden="true"></div>
+
+    <div id="inventoryOverlay" class="inv-overlay" aria-hidden="true" role="dialog" aria-label="Inventario">
+      <div class="inv-panel">
+
+        <div class="inv-header">
+          <span class="inv-title">Inventario</span>
+          <span class="inv-header-hint"><kbd class="inv-kbd">I</kbd> cerrar</span>
+        </div>
+
+        <div class="inv-body">
+          <div class="inv-grid-wrap">
+            <div id="inventoryGrid" class="inv-grid">
+            </div>
+          </div>
+          <div class="inv-detail" id="inventoryDetail">
+            <p class="inv-detail-placeholder">Selecciona<br>un objeto</p>
+          </div>
+        </div>
+
+        <div class="inv-footer">
+          <span class="inv-footer-hint"><kbd class="inv-kbd">E</kbd> Usar</span>
+          <span class="inv-footer-hint"><kbd class="inv-kbd">[</kbd><kbd class="inv-kbd">]</kbd> Navegar</span>
+          <span class="inv-footer-hint"><kbd class="inv-kbd">I</kbd> / <kbd class="inv-kbd">ESC</kbd> Cerrar</span>
+        </div>
+
+      </div>
+    </div>
 
     <button id="settingsButton" class="settings-button" type="button" aria-label="Settings" title="Settings">
       <img id="settingsButtonImg"
@@ -274,14 +384,14 @@
     <div id="settingsPanel" class="settings-panel" aria-hidden="true">
       <div class="settings-panel-title">Settings</div>
 
-      <button id="downloadSaveButton" class="settings-img-btn" type="button" aria-label="Download save file" title="Download save file">
+      <button id="downloadSaveButton" class="settings-img-btn" type="button" aria-label="Download save file">
         <img src="./assets/UI/buttons/save.png"
              data-normal="./assets/UI/buttons/save.png"
              data-hover="./assets/UI/buttons/save_hover.png"
              alt="Download Save" />
       </button>
 
-      <button id="importSaveButton" class="settings-img-btn" type="button" aria-label="Import save file" title="Import save file">
+      <button id="importSaveButton" class="settings-img-btn" type="button" aria-label="Import save file">
         <img src="./assets/UI/buttons/load.png"
              data-normal="./assets/UI/buttons/load.png"
              data-hover="./assets/UI/buttons/load_hover.png"
@@ -297,81 +407,114 @@
       import Game from "./engine/index.js";
 
       const KEY_DIRECTIONS = {
-        w: true,
-        arrowup: true,
-        s: true,
-        arrowdown: true,
-        a: true,
-        arrowleft: true,
-        d: true,
-        arrowright: true
+        w: true, arrowup: true,
+        s: true, arrowdown: true,
+        a: true, arrowleft: true,
+        d: true, arrowright: true
       };
 
-      const canvas             = document.getElementById("game");
-      const hud                = document.getElementById("hud");
-      const inventory          = document.getElementById("inventory");
-      const inventoryTooltip   = document.getElementById("inventoryTooltip");
-      const messageElement     = document.getElementById("message");
-      const settingsButton     = document.getElementById("settingsButton");
-      const settingsButtonImg  = document.getElementById("settingsButtonImg");
-      const settingsPanel      = document.getElementById("settingsPanel");
-      const downloadSaveBtn    = document.getElementById("downloadSaveButton");
-      const importSaveBtn      = document.getElementById("importSaveButton");
-      const importFileInput    = document.getElementById("importFileInput");
-      const toggleMusicButton  = document.getElementById("toggleMusicButton");
-      const clearSaveButton    = document.getElementById("clearSaveButton");
+      const inventoryGrid    = document.getElementById("inventoryGrid");
+      const inventoryOverlay = document.getElementById("inventoryOverlay");
+      const inventoryDetail  = document.getElementById("inventoryDetail");
+      const messageElement   = document.getElementById("message");
+      const hud              = document.getElementById("hud");
+      const settingsButton   = document.getElementById("settingsButton");
+      const settingsPanel    = document.getElementById("settingsPanel");
+      const downloadSaveBtn  = document.getElementById("downloadSaveButton");
+      const importSaveBtn    = document.getElementById("importSaveButton");
+      const importFileInput  = document.getElementById("importFileInput");
+      const toggleMusicButton = document.getElementById("toggleMusicButton");
+      const clearSaveButton  = document.getElementById("clearSaveButton");
+      const canvas           = document.getElementById("game");
 
-      let inventoryOpen = false;
+      // pasa el grid como inventoryElement para que drawInventoryUI() lo llene
+      const game = new Game(canvas, hud, inventoryGrid, messageElement);
 
+      // Inventario cerrar o abrir
       function setInventoryOpen(open) {
-        inventoryOpen = open;
-        inventory.classList.toggle("open", open);
-        inventory.setAttribute("aria-hidden", String(!open));
-        if (!open) { hideTooltip(); }
+        game.setInventoryOpen(open);
+        inventoryOverlay.classList.toggle("open", open);
+        inventoryOverlay.setAttribute("aria-hidden", String(!open));
+        if (open) {
+          renderInventoryGrid();
+          renderInventoryDetail();
+        }
       }
 
-      function hideTooltip() {
-        inventoryTooltip.style.display = "none";
-        inventoryTooltip.setAttribute("aria-hidden", "true");
+      // detalles del item que vos agarras o hover
+      function renderInventoryDetail(hoveredIndex) {
+        const idx    = hoveredIndex ?? game.selectedInventoryIndex;
+        const itemId = game.inventory?.[idx];
+        const item   = game.itemDefinitions?.[itemId];
+
+        if (!item) {
+          const empty = !game.inventory?.length;
+          inventoryDetail.innerHTML = `<p class="inv-detail-placeholder">${
+            empty ? "Inventario<br>vacío" : "Selecciona<br>un objeto"
+          }</p>`;
+          return;
+        }
+
+        const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+        let stat = "";
+        if (item.use?.action === "heal")      stat = `+${item.use.amount} HP`;
+        else if (item.type === "consumable")  stat = "Consumible";
+
+        inventoryDetail.innerHTML = `
+          ${item.texture ? `<img src="${item.texture}" class="inv-detail-icon" alt="">` : ""}
+          <div class="inv-detail-name">${esc(item.display_name ?? itemId)}</div>
+          ${item.description ? `<div class="inv-detail-desc">${esc(item.description)}</div>` : ""}
+          ${stat             ? `<div class="inv-detail-stat">${esc(stat)}</div>` : ""}
+          <div class="inv-detail-use"><kbd class="inv-kbd">E</kbd> para usar</div>
+        `;
       }
 
-      function showTooltip(slot) {
-        const name = slot.dataset.name || "";
-        const desc = slot.dataset.desc || "";
-        const stat = slot.dataset.stat || "";
-        if (!name && !desc && !stat) { return; }
-
-        inventoryTooltip.innerHTML =
-          (name ? `<div class="inventory-tooltip-name">${name}</div>` : "") +
-          (desc ? `<div class="inventory-tooltip-desc">${desc}</div>`  : "") +
-          (stat ? `<div class="inventory-tooltip-stat">${stat}</div>`  : "");
-        inventoryTooltip.style.display = "block";
-        inventoryTooltip.setAttribute("aria-hidden", "false");
-
-        const slotRect = slot.getBoundingClientRect();
-        const tipW = inventoryTooltip.offsetWidth;
-        const tipH = inventoryTooltip.offsetHeight;
-        let x = slotRect.left + slotRect.width / 2 - tipW / 2;
-        let y = slotRect.top  - tipH - 8;
-        if (y < 8) { y = slotRect.bottom + 8; }
-        x = Math.max(8, Math.min(x, window.innerWidth  - tipW - 8));
-        y = Math.max(8, Math.min(y, window.innerHeight - tipH - 8));
-        inventoryTooltip.style.left = `${x}px`;
-        inventoryTooltip.style.top  = `${y}px`;
+      function renderInventoryGrid() {
+        game.drawInventoryUI();
+        if (!game.inventory?.length) {
+          inventoryGrid.innerHTML = `<div class="inv-empty-msg">Inventario vacío</div>`;
+        }
       }
-
-      inventory.addEventListener("mouseover", (e) => {
-        const slot = e.target.closest(".inventory-slot");
-        if (slot) { showTooltip(slot); }
+      
+      inventoryGrid.addEventListener("click", (e) => {
+        const slot = e.target.closest(".inv-slot");
+        if (!slot) { return; }
+        const idx = Number(slot.dataset.index);
+        game.selectedInventoryIndex = idx;
+        game._inventoryRenderKey = null; // fuerza re-renderizarlo
+        renderInventoryGrid();
+        renderInventoryDetail();
       });
-      inventory.addEventListener("mouseout", (e) => {
-        if (!e.relatedTarget || !inventory.contains(e.relatedTarget)) { hideTooltip(); }
+
+      inventoryGrid.addEventListener("mouseover", (e) => {
+        const slot = e.target.closest(".inv-slot");
+        if (slot) { renderInventoryDetail(Number(slot.dataset.index)); }
+      });
+      inventoryGrid.addEventListener("mouseout", (e) => {
+        if (!e.relatedTarget || !inventoryGrid.contains(e.relatedTarget)) {
+          renderInventoryDetail();
+        }
       });
 
-      const game = new Game(canvas, hud, inventory, messageElement);
+// auto abrir el inventario cuando agarras vos algo
+      game.onInventoryChanged = () => {
+        if (!game.inventoryOpen) {
+          setInventoryOpen(true);
+        } else {
+          renderInventoryGrid();
+          renderInventoryDetail();
+        }
+      };
+
+      const _origDraw = game.drawInventoryUI.bind(game);
+      game.drawInventoryUI = function () {
+        _origDraw();
+        if (game.inventoryOpen) { renderInventoryDetail(); }
+      };
+
       async function init() {
         try {
-          await game.start("map1");
+          await game.start("map1"); //aquí modificas el mapa de inicio, IMPORTANTE
           requestAnimationFrame(loop);
         } catch (err) {
           console.error(err);
@@ -383,18 +526,15 @@
         game.draw();
         requestAnimationFrame(loop);
       }
+
+      //los configuraciones o settings esos
+      
       function attachHoverSprite(buttonEl) {
         const img = buttonEl.querySelector("img[data-hover]");
         if (!img) { return; }
-        buttonEl.addEventListener("pointerenter", () => {
-          img.src = img.dataset.hover;
-        });
-        buttonEl.addEventListener("pointerleave", () => {
-          img.src = img.dataset.normal;
-        });
-        buttonEl.addEventListener("blur", () => {
-          img.src = img.dataset.normal;
-        });
+        buttonEl.addEventListener("pointerenter", () => { img.src = img.dataset.hover; });
+        buttonEl.addEventListener("pointerleave", () => { img.src = img.dataset.normal; });
+        buttonEl.addEventListener("blur",         () => { img.src = img.dataset.normal; });
       }
 
       attachHoverSprite(settingsButton);
@@ -415,33 +555,11 @@
         }
       });
 
-      downloadSaveBtn.addEventListener("click", () => {
-        game.downloadSave();
-      });
-
-      importSaveBtn.addEventListener("click", () => {
-        importFileInput.value = "";  
-        importFileInput.click();
-      });
-
-      importFileInput.addEventListener("change", () => {
-        const file = importFileInput.files[0];
-        if (file) {
-          game.importSave(file);
-        }
-      });
-
-      toggleMusicButton.addEventListener("click", () => {
-        game.toggleMusic();
-      });
-
-      
-      clearSaveButton.addEventListener("click", () => {
-        game.clearSave();
-        window.location.reload();
-      });
-
-
+      downloadSaveBtn.addEventListener("click",  () => { game.downloadSave(); });
+      importSaveBtn.addEventListener("click",    () => { importFileInput.value = ""; importFileInput.click(); });
+      importFileInput.addEventListener("change", () => { if (importFileInput.files[0]) { game.importSave(importFileInput.files[0]); } });
+      toggleMusicButton.addEventListener("click",() => { game.toggleMusic(); });
+      clearSaveButton.addEventListener("click",  () => { game.clearSave(); window.location.reload(); });
 
       window.addEventListener("keydown", event => {
         if (event.defaultPrevented) { return; }
@@ -455,19 +573,20 @@
 
         if (key === "i") {
           event.preventDefault();
-          setInventoryOpen(!inventoryOpen);
+          setInventoryOpen(!game.inventoryOpen);
           return;
         }
 
-        if (key === "escape" && inventoryOpen) {
+        if (key === "escape") {
           event.preventDefault();
-          setInventoryOpen(false);
+          if (game.inventoryOpen) { setInventoryOpen(false); }
           return;
         }
 
         if (key === "e") {
           event.preventDefault();
           game.useSelectedItem();
+          if (game.inventoryOpen) { renderInventoryGrid(); renderInventoryDetail(); }
           return;
         }
 
@@ -477,15 +596,23 @@
           return;
         }
 
+        if (key === "x") {
+          event.preventDefault();
+          game.attackForward();
+          return;
+        }
+
         if (key === "[") {
           event.preventDefault();
           game.cycleInventory(-1);
+          if (game.inventoryOpen) { renderInventoryGrid(); renderInventoryDetail(); }
           return;
         }
 
         if (key === "]") {
           event.preventDefault();
           game.cycleInventory(1);
+          if (game.inventoryOpen) { renderInventoryGrid(); renderInventoryDetail(); }
           return;
         }
       });
@@ -499,13 +626,12 @@
       });
 
       canvas.addEventListener("click", event => {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
+        if (game.inventoryOpen) { return; }
+        const rect   = canvas.getBoundingClientRect();
+        const scaleX = canvas.width  / rect.width;
         const scaleY = canvas.height / rect.height;
-        const clickX = (event.clientX - rect.left) * scaleX;
-        const clickY = (event.clientY - rect.top) * scaleY;
-        const tileX = Math.floor(clickX / game.tileSize);
-        const tileY = Math.floor(clickY / game.tileSize);
+        const tileX  = Math.floor((event.clientX - rect.left) * scaleX / game.tileSize);
+        const tileY  = Math.floor((event.clientY - rect.top)  * scaleY / game.tileSize);
         const camera = game.getCamera();
         game.interactAt(camera.x + tileX, camera.y + tileY);
       });
@@ -513,5 +639,5 @@
       init();
     </script>
   </body>
-
+<!-- eso es todo -->
 </html>

@@ -1,8 +1,4 @@
-/**
- * Centralized debug logging for JSRPG.
- * Set window.__JSRPG_DEBUG = true in the browser console to enable verbose logs.
- * All debug() calls are silent in production unless the flag is set.
- */
+// debuggear
 
 const PREFIX = "[JSRPG]";
 

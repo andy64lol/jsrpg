@@ -10,9 +10,10 @@
         "hearts": 10 //hp, hearts in the UI dir inside assets, 2 hp is a heart, and what is left is the broken variant
     },
     "map":{
-        "tile_size": 8
+        "tile_size": 8,
+        "viewport_width":  10,
+        "viewport_height": 10
     },
-    "render_distance": 7, // ese es el base
     "UI":{
         "size": 1
     }

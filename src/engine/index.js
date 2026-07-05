@@ -2,6 +2,8 @@ import { load as loadMap } from "./map.js";
 import Player from "./player.js";
 import { saveGameState, loadGameState } from "./save_load.js";
 import { debug, info, warn, error } from "./debug.js";
+import { parseFlexJSON, fetchFlexJSON } from "./json.js";
+import { spawnEntities } from "./entity.js";
 
 const MODULE = "Game";
 
@@ -55,15 +57,15 @@ function loadImage(src) {
  * @param {URL|string} url
  * @returns {Promise<object>}
  */
-async function loadJSONC(url) {
-    debug(MODULE, `Fetching JSONC: ${url}`);
+async function loadFlexJSON(url) {
+    debug(MODULE, `Fetching flex JSON: ${url}`);
     const response = await fetch(url);
     if (!response.ok) {
-        throw new Error(`Failed to fetch JSONC from ${url} (status ${response.status})`);
+        throw new Error(`Failed to fetch from ${url} (status ${response.status})`);
     }
     const text = await response.text();
-    debug(MODULE, `JSONC fetched (${text.length} chars): ${url}`);
-    return JSON.parse(text.replace(/\/\/.*$/gm, ""));
+    debug(MODULE, `Fetched (${text.length} chars): ${url}`);
+    return parseFlexJSON(text);
 }
 
 export default class Game {
@@ -93,8 +95,8 @@ export default class Game {
             }
         };
         this.tileSize = DEFAULT_TILE_SIZE;
-        this.viewportWidth = 7;
-        this.viewportHeight = 7;
+        this.viewportWidth  = 10;
+        this.viewportHeight = 10;
         this.camera = { x: 0, y: 0 };
         this.cameraLerpSpeed = 18;
         this.health = 0;
@@ -122,6 +124,9 @@ export default class Game {
             damage: null,
             music: null
         };
+        this.musicEnabled = true;
+        this.entities = [];
+        this.inventoryOpen = false;
         debug(MODULE, "Game instance initialized with defaults");
     }
 
@@ -129,8 +134,8 @@ export default class Game {
         info(MODULE, "Loading config and sound config...");
 
         const [config, soundConfig] = await Promise.all([
-            loadJSONC(new URL("./config.jsonc", import.meta.url)),
-            loadJSONC(new URL("../assets/sounds/soundconfig.jsonc", import.meta.url))
+            loadFlexJSON(new URL("./config.jsonc", import.meta.url)),
+            loadFlexJSON(new URL("../assets/sounds/soundconfig.jsonc", import.meta.url))
         ]);
 
         debug(MODULE, "Raw config loaded:", config);
@@ -170,7 +175,7 @@ export default class Game {
 
         debug(MODULE, `Config applied: tileSize=${this.tileSize}, viewport=${this.viewportWidth}x${this.viewportHeight}, maxHealth=${this.maxHealth}`);
 
-        this.itemDefinitions = await loadJSONC(new URL("./items.jsonc", import.meta.url));
+        this.itemDefinitions = await loadFlexJSON(new URL("./items.jsonc", import.meta.url));
         info(MODULE, `Item definitions loaded: ${Object.keys(this.itemDefinitions).join(", ")}`);
     }
 
@@ -246,6 +251,8 @@ export default class Game {
         this.visualPosition = { x: this.player.x, y: this.player.y };
         debug(MODULE, `Visual position set to (${this.visualPosition.x}, ${this.visualPosition.y})`);
 
+        this.entities = spawnEntities(this.map);
+
         info(MODULE, "Loading textures...");
         await this.loadTextures();
 
@@ -255,7 +262,7 @@ export default class Game {
         this.applyTileEffects(this.player.x, this.player.y);
         this.setupSoundsForCurrentMap();
 
-        if (this.sounds.music) {
+        if (this.sounds.music && this.musicEnabled) {
             debug(MODULE, "Starting background music...");
             this.sounds.music.play().catch((err) => {
                 warn(MODULE, "Music autoplay was blocked by browser:", err.message);
@@ -271,11 +278,13 @@ export default class Game {
         info(MODULE, "Loading all textures...");
         const tileSources = Object.values(this.map.definitions.tiles);
         const itemSources = Object.values(this.itemDefinitions || {}).map(item => item.texture).filter(Boolean);
+        const entitySources = Object.values(this.map.definitions.entities ?? {}).map(e => e.sprite).filter(Boolean);
         const assetSources = new Set([
             ...tileSources,
             ...Object.values(PLAYER_SPRITES),
             ...Object.values(UI_SPRITES),
-            ...itemSources
+            ...itemSources,
+            ...entitySources
         ]);
 
         debug(MODULE, `Total unique assets to load: ${assetSources.size}`);
@@ -314,11 +323,10 @@ export default class Game {
     resizeCanvas() {
         this.camera.x = 0;
         this.camera.y = 0;
-        const width = Math.min(this.map.width, this.viewportWidth);
-        const height = Math.min(this.map.height, this.viewportHeight);
-        this.canvas.width = width * this.tileSize;
-        this.canvas.height = height * this.tileSize;
-        debug(MODULE, `Canvas dimensions: ${this.canvas.width}x${this.canvas.height}px (${width}x${height} tiles @ ${this.tileSize}px each)`);
+        // el canvas siempre es viewportWidth x viewportHeight, las partes fuera del mapa se pintan de negro
+        this.canvas.width  = this.viewportWidth  * this.tileSize;
+        this.canvas.height = this.viewportHeight * this.tileSize;
+        debug(MODULE, `Canvas dimensions: ${this.canvas.width}x${this.canvas.height}px (${this.viewportWidth}x${this.viewportHeight} tiles @ ${this.tileSize}px each)`);
     }
 
     getCamera() {
@@ -389,6 +397,9 @@ export default class Game {
         const deltaSeconds = this.lastUpdate ? (now - this.lastUpdate) / 1000 : 0;
         this.lastUpdate = now;
 
+        // pausa completa cuando el inventario esta abierto
+        if (this.inventoryOpen) { return; }
+
         if (this.isAnimating && this.animation) {
             this.animation.progress += deltaSeconds / this.getGlideDuration();
             debug(MODULE, `Animation progress: ${this.animation.progress.toFixed(3)}`);
@@ -445,6 +456,15 @@ export default class Game {
             this.moveStepTimer = 0;
         }
 
+        if (this.entities && this.entities.length > 0) {
+            for (const entity of this.entities) {
+                const damage = entity.update(deltaSeconds, this.map, this.player.x, this.player.y);
+                if (damage > 0) {
+                    this.takeDamage(damage);
+                }
+            }
+        }
+
         this.updateCamera(deltaSeconds);
     }
 
@@ -462,6 +482,14 @@ export default class Game {
         const originX = this.player.x;
         const originY = this.player.y;
         debug(MODULE, `movePlayer: attempting (${originX},${originY}) + (${dx},${dy})`);
+
+        // bloquea si hay una entidad en el destino
+        const destX = originX + dx;
+        const destY = originY + dy;
+        if (this.entities?.find(e => e.x === destX && e.y === destY)) {
+            debug(MODULE, `Movimiento bloqueado — entidad en (${destX},${destY})`);
+            return;
+        }
 
         const result = this.player.move(dx, dy, this.map.logic, this.map.definitions);
 
@@ -501,29 +529,34 @@ export default class Game {
         if (def?.type === "player_damage") {
             const damage = Number(def.damage || 1);
             if (damage > 0) {
-                const oldHealth = this.health;
-                this.health = Math.max(0, this.health - damage);
-                warn(MODULE, `Player took ${damage} damage at (${x},${y}) — health: ${oldHealth} → ${this.health}`);
-
-                if (this.sounds.damage) {
-                    this.sounds.damage.play().catch((err) => {
-                        warn(MODULE, "Failed to play damage sound:", err.message);
-                    });
-                } else {
-                    debug(MODULE, "Damage sound not loaded, skipping playback");
-                }
-
-                if (this.health <= 0) {
-                    warn(MODULE, "Health reached 0 — player died");
-                    this.die();
-                }
-                this.saveState();
+                this.takeDamage(damage);
             }
         }
 
         if (def?.type === "heal_regen") {
             debug(MODULE, `Regenerative tile at (${x},${y}) — type noted (passive, not yet implemented)`);
         }
+    }
+
+    takeDamage(amount) {
+        if (this.isDead) {
+            return;
+        }
+        const oldHealth = this.health;
+        this.health = Math.max(0, this.health - amount);
+        warn(MODULE, `Player took ${amount} damage — health: ${oldHealth} → ${this.health}`);
+
+        if (this.sounds.damage) {
+            this.sounds.damage.play().catch((err) => {
+                warn(MODULE, "Failed to play damage sound:", err.message);
+            });
+        }
+
+        if (this.health <= 0) {
+            warn(MODULE, "Health reached 0 — player died");
+            this.die();
+        }
+        this.saveState();
     }
 
     saveState() {
@@ -558,6 +591,7 @@ export default class Game {
         this.selectedInventoryIndex = this.inventory.length - 1;
         info(MODULE, `Item added to inventory: "${itemId}" (slot ${this.selectedInventoryIndex}), total items: ${this.inventory.length}`);
         this.saveState();
+        this.onInventoryChanged?.();
     }
 
     getSelectedItem() {
@@ -601,8 +635,10 @@ export default class Game {
                 const oldHealth = this.health;
                 this.health = Math.min(this.maxHealth, this.health + Number(amount));
                 info(MODULE, `Item used: "${item.display_name}" healed ${amount} HP — health: ${oldHealth} → ${this.health}`);
+                this.showMessage(`Used ${item.display_name}! Restored ${this.health - oldHealth} HP.`);
             } else {
                 debug(MODULE, `Item "${item.display_name}" consumed but no heal action taken (action="${action}", amount=${amount})`);
+                this.showMessage(`Used ${item.display_name}.`);
             }
 
             const removedIndex = this.selectedInventoryIndex;
@@ -615,6 +651,7 @@ export default class Game {
                 this.selectedInventoryIndex = this.inventory.length - 1;
             }
             this.saveState();
+            this.onInventoryChanged?.();
         }
     }
 
@@ -741,10 +778,36 @@ export default class Game {
         return target;
     }
 
+    // F -- interactua con tiles (fuentes, cofres, puertas...)
     interactForward() {
+        if (this.isDead) { return; }
         const target = this.getInteractionTarget();
-        debug(MODULE, `interactForward → interactAt(${target.x},${target.y})`);
+        debug(MODULE, `interactForward → tile (${target.x},${target.y})`);
         this.interactAt(target.x, target.y);
+    }
+
+    // X -- ataca al enemigo que tiene enfrente, solo horizontal (izq/der segun facing)
+    attackForward() {
+        if (this.isDead || this.transition) { return; }
+        const target = this.getInteractionTarget();
+        debug(MODULE, `attackForward → (${target.x},${target.y})`);
+
+        if (!this.entities || this.entities.length === 0) { return; }
+
+        const hit = this.entities.find(e => e.x === target.x && e.y === target.y);
+        if (!hit) {
+            debug(MODULE, "attackForward: no entity at target");
+            return;
+        }
+
+        hit.health -= 1;
+        debug(MODULE, `Golpe a "${hit.type}" en (${hit.x},${hit.y}) — HP: ${hit.health}/${hit.maxHealth}`);
+
+        if (hit.health <= 0) {
+            this.entities = this.entities.filter(e => e !== hit);
+            info(MODULE, `"${hit.type}" derrotado en (${target.x},${target.y})`);
+            this.showMessage(`Derrotaste al ${hit.type}!`);
+        }
     }
 
     resolveSoundUrl(filename) {
@@ -812,6 +875,18 @@ export default class Game {
         debug(MODULE, `Sounds setup complete — music=${!!this.sounds.music}, damage=${!!this.sounds.damage}`);
     }
 
+    setInventoryOpen(open) {
+        this.inventoryOpen = open;
+        // resetea el timer para no acumular dt mientras estaba pausado
+        this.lastUpdate = null;
+        if (open) {
+            // para el movimiento inmediatamente al abrir
+            this.activeMoveKeys.clear();
+            this.moveOrder = [];
+        }
+        debug(MODULE, `Inventory ${open ? "opened" : "closed"} — game ${open ? "paused" : "resumed"}`);
+    }
+
     toggleMusic() {
         debug(MODULE, "toggleMusic called");
         if (!this.sounds.music) {
@@ -824,13 +899,16 @@ export default class Game {
             return;
         }
 
-        if (this.sounds.music.paused) {
-            debug(MODULE, "Music is paused — resuming");
+        this.musicEnabled = !this.musicEnabled;
+        debug(MODULE, `Music toggled — musicEnabled=${this.musicEnabled}`);
+
+        if (this.musicEnabled) {
+            debug(MODULE, "Music enabled — resuming");
             this.sounds.music.play().catch((err) => {
                 warn(MODULE, "Failed to resume music:", err.message);
             });
         } else {
-            debug(MODULE, "Music is playing — pausing");
+            debug(MODULE, "Music disabled — pausing");
             this.sounds.music.pause();
         }
     }
@@ -986,6 +1064,7 @@ export default class Game {
         this.animation = null;
         this.isAnimating = false;
         this.restoreMapChanges(this.mapChanges);
+        this.entities = spawnEntities(this.map);
 
         debug(MODULE, `Player repositioned to (${this.player.x},${this.player.y}) in new map, visual position snapped`);
 
@@ -1002,7 +1081,7 @@ export default class Game {
         }
 
         this.setupSoundsForCurrentMap();
-        if (this.sounds.music) {
+        if (this.sounds.music && this.musicEnabled) {
             this.sounds.music.play().catch((err) => {
                 warn(MODULE, "Music autoplay blocked after warp:", err.message);
             });
@@ -1015,36 +1094,47 @@ export default class Game {
         }
 
         const ctx = this.ctx;
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // negro para las partes vacias fuera del mapa
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         const camera = this.getCamera();
-        const viewWidth = Math.min(this.viewportWidth, this.map.width);
-        const viewHeight = Math.min(this.viewportHeight, this.map.height);
 
-        // Dibujalos
-        for (let y = camera.y; y < camera.y + viewHeight; y++) {
-            for (let x = camera.x; x < camera.x + viewWidth; x++) {
-                const id = this.map.map[y][x];
-                const src = this.map.definitions.tiles[id];
+        // recorremos el viewport entero -- tiles fuera del mapa se quedan negros
+        for (let sy = 0; sy < this.viewportHeight; sy++) {
+            for (let sx = 0;  sx < this.viewportWidth; sx++) {
+                const mx = camera.x + sx;
+                const my = camera.y + sy;
+
+                if (mx < 0 || my < 0 || mx >= this.map.width || my >= this.map.height) { continue; }
+
+                const id       = this.map.map[my][mx];
+                const src      = this.map.definitions.tiles[id];
                 const tileImage = this.tileImages[src];
 
                 if (tileImage) {
-                    ctx.drawImage(
-                        tileImage,
-                        (x - camera.x) * this.tileSize,
-                        (y - camera.y) * this.tileSize,
-                        this.tileSize,
-                        this.tileSize
-                    );
+                    ctx.drawImage(tileImage, sx * this.tileSize, sy * this.tileSize, this.tileSize, this.tileSize);
                 } else {
-                    // Ponemos uno de magenta si no existe xddd
+                    // magenta si falta la textura
                     ctx.fillStyle = "#ff00ff";
-                    ctx.fillRect(
-                        (x - camera.x) * this.tileSize,
-                        (y - camera.y) * this.tileSize,
-                        this.tileSize,
-                        this.tileSize
-                    );
+                    ctx.fillRect(sx * this.tileSize, sy * this.tileSize, this.tileSize, this.tileSize);
+                }
+            }
+        }
+
+        // dibuja entidades usando posicion visual (vx,vy) para la animacion de caminar
+        if (this.entities && this.entities.length > 0) {
+            for (const entity of this.entities) {
+                const ex = entity.vx - camera.x;
+                const ey = entity.vy - camera.y;
+                if (ex < -1 || ey < -1 || ex >= this.viewportWidth + 1 || ey >= this.viewportHeight + 1) { continue; }
+                const entitySprite = this.imageCache[entity.sprite];
+                if (entitySprite) {
+                    ctx.drawImage(entitySprite, ex * this.tileSize, ey * this.tileSize, this.tileSize, this.tileSize);
+                } else {
+                    ctx.fillStyle = "#ff0000";
+                    ctx.fillRect(ex * this.tileSize, ey * this.tileSize, this.tileSize, this.tileSize);
                 }
             }
         }
@@ -1158,27 +1248,23 @@ export default class Game {
         const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
         const slotsHtml = this.inventory.map((itemId, index) => {
-            const item = this.itemDefinitions[itemId];
-            const selected = index === this.selectedInventoryIndex ? " selected" : "";
+            const item    = this.itemDefinitions[itemId];
+            const sel     = index === this.selectedInventoryIndex ? " selected" : "";
             const texture = item?.texture ?? "";
-            const name = esc(item?.display_name ?? itemId);
-            const desc = esc(item?.description ?? "");
+            const name    = esc(item?.display_name ?? itemId);
+            const desc    = esc(item?.description ?? "");
             let stat = "";
             if (item?.use?.action === "heal") {
-                stat = esc(`Restores ${item.use.amount} HP`);
+                stat = esc(`+${item.use.amount} HP`);
             } else if (item?.type === "consumable") {
-                stat = "Consumable";
+                stat = "Consumible";
             }
 
             const icon = texture
-                ? `<img src="${texture}" alt="${name}" class="inventory-item-icon">`
-                : `<span class="inventory-item-fallback">${name.charAt(0)}</span>`;
+                ? `<img src="${texture}" alt="${name}" class="inv-slot-icon">`
+                : `<span class="inv-slot-fallback">${name.charAt(0)}</span>`;
 
-            return `<div class="inventory-slot${selected}"
-                         data-name="${name}"
-                         data-desc="${desc}"
-                         data-stat="${stat}"
-                         data-index="${index}">${icon}</div>`;
+            return `<div class="inv-slot${sel}" data-name="${name}" data-desc="${desc}" data-stat="${stat}" data-index="${index}">${icon}</div>`;
         }).join("");
 
         this.inventoryElement.innerHTML = slotsHtml;

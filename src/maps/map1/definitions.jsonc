@@ -27,26 +27,37 @@
             "target_tile": {
                 "x": 4,
                 "y": 2
-                // aquí no hay x 0 ni y 0 así que aparece en frente de la puerta, no hay cordenadas cartesianas por cierto
             }
         },
         "4":{
             "type": "heal",
             "infinity": true,
             "heals": 10,
-            "solid": true, //el jugador no va a estar sobre la fuente
+            "solid": true,
             "interactType": "click",
             "interactRequirements":{
-                "player_in_radius": 1, // vamos a usar radio de tiles
-                "diagonal": false // no se puede interactuar en diagonal, solo en horizontal y vertical
-                // quedaria algo así
-                // x es donde se puede interactuar y "y" es donde está el tile para interactuar:
-                //
-                // x
-                //xyx
-                // x
+                "player_in_radius": 1,
+                "diagonal": false
             },
-            "afterInteractText": "You drank the water and restored 10 health." //texto que dice
+            "afterInteractText": "You drank the water and restored 10 health."
+        },
+        "5":{
+            "type": "entity_spawn",
+            "entity": "bat"
+        },
+        "6":{
+            "type": "entity_spawn",
+            "entity": "bat"
+        }
+    },
+    "entities":{ //así se define las entidades, aún en proceso de añadir más IA y comportamientos
+        "bat":{
+            "sprite": "assets/sprites/enemy/bat.png",
+            "health": 3,
+            "damage": 1,
+            "speed": 1,
+            "behavior": "patrol",
+            "chaseRadius": 4
         }
     }
 }

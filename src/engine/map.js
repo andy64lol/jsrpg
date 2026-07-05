@@ -1,4 +1,5 @@
 import { debug, info, warn, error } from "./debug.js";
+import { parseFlexJSON, fetchFlexJSON } from "./json.js";
 
 const MODULE = "Map";
 
@@ -14,37 +15,29 @@ function parseCSV(text) {
     return rows;
 }
 
-function parseJSONC(text) {
-    debug(MODULE, "Parsing JSONC (stripping comments)...");
-    return JSON.parse(text.replace(/\/\/.*$/gm, ""));
-}
-
-async function load(mapName) {
+export async function load(mapName) {
     info(MODULE, `Loading map: "${mapName}"`);
     const base = `maps/${mapName}/`;
 
     debug(MODULE, `Fetching map files from: ${base}`);
 
-    let mapCSVText, logicCSVText, defJSONCText;
+    let mapCSVText, logicCSVText, defText;
     try {
-        const [mapRes, logicRes, defRes] = await Promise.all([
+        const [mapRes, logicRes] = await Promise.all([
             fetch(base + "map.csv"),
-            fetch(base + "collisions.csv"),
-            fetch(base + "definitions.jsonc")
+            fetch(base + "collisions.csv")
         ]);
 
-        debug(MODULE, `map.csv        → HTTP ${mapRes.status} ${mapRes.url}`);
-        debug(MODULE, `collisions.csv → HTTP ${logicRes.status} ${logicRes.url}`);
-        debug(MODULE, `definitions.jsonc → HTTP ${defRes.status} ${defRes.url}`);
+        debug(MODULE, `map.csv        → HTTP ${mapRes.status}`);
+        debug(MODULE, `collisions.csv → HTTP ${logicRes.status}`);
 
-        if (!mapRes.ok) {throw new Error(`Failed to fetch map.csv for "${mapName}" (status ${mapRes.status})`);}
-        if (!logicRes.ok) {throw new Error(`Failed to fetch collisions.csv for "${mapName}" (status ${logicRes.status})`);}
-        if (!defRes.ok) {throw new Error(`Failed to fetch definitions.jsonc for "${mapName}" (status ${defRes.status})`);}
+        if (!mapRes.ok) { throw new Error(`Failed to fetch map.csv for "${mapName}" (status ${mapRes.status})`); }
+        if (!logicRes.ok) { throw new Error(`Failed to fetch collisions.csv for "${mapName}" (status ${logicRes.status})`); }
 
-        [mapCSVText, logicCSVText, defJSONCText] = await Promise.all([
+        [mapCSVText, logicCSVText, defText] = await Promise.all([
             mapRes.text(),
             logicRes.text(),
-            defRes.text()
+            fetchFlexJSON(`${base}definitions`)
         ]);
     } catch (err) {
         error(MODULE, `Error loading map files for "${mapName}":`, err);
@@ -54,11 +47,12 @@ async function load(mapName) {
     debug(MODULE, "Parsing map layers...");
     const map = parseCSV(mapCSVText);
     const logic = parseCSV(logicCSVText);
-    const definitions = parseJSONC(defJSONCText);
+    const definitions = parseFlexJSON(defText);
 
     debug(MODULE, `Map size: ${map[0]?.length ?? 0}w x ${map.length}h tiles`);
     debug(MODULE, `Tile definitions:`, Object.keys(definitions.tiles ?? {}));
     debug(MODULE, `Collision definitions:`, Object.keys(definitions.collisions ?? {}));
+    debug(MODULE, `Entity templates:`, Object.keys(definitions.entities ?? {}));
 
     debug(MODULE, "Validating map structure...");
     validateMapStructure(map, logic);
@@ -143,14 +137,10 @@ function findSpawn(logic, definitions) {
         for (let x = 0; x < logic[y].length; x++) {
             const id = logic[y][x];
             const def = definitions.collisions[id];
-
             if (def && def.type === "player_spawn") {
                 return { x, y };
             }
         }
     }
-
     return null;
 }
-
-export { load };
