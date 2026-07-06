@@ -126,6 +126,7 @@ export default class Game {
         };
         this.musicEnabled = true;
         this.entities = [];
+        this.killedEntityIds = [];
         this.inventoryOpen = false;
         debug(MODULE, "Game instance initialized with defaults");
     }
@@ -234,6 +235,7 @@ export default class Game {
             this.selectedInventoryIndex = savedState.selectedInventoryIndex ?? 0;
 
             this.mapChanges = Array.isArray(savedState.mapChanges) ? savedState.mapChanges : [];
+            this.killedEntityIds = Array.isArray(savedState.killedEntityIds) ? savedState.killedEntityIds : [];
 
             debug(MODULE, `Restored inventory (${this.inventory.length} items), mapChanges (${this.mapChanges.length} total across all maps)`);
             this.restoreMapChanges(this.mapChanges);
@@ -246,12 +248,17 @@ export default class Game {
             this.health = this.maxHealth;
             this.selectedInventoryIndex = 0;
             this.mapChanges = [];
+            this.killedEntityIds = [];
         }
 
         this.visualPosition = { x: this.player.x, y: this.player.y };
         debug(MODULE, `Visual position set to (${this.visualPosition.x}, ${this.visualPosition.y})`);
 
         this.entities = spawnEntities(this.map);
+        if (this.killedEntityIds.length > 0) {
+            this.entities = this.entities.filter(e => !this.killedEntityIds.includes(e.instanceId));
+            debug(MODULE, `Filtered ${this.killedEntityIds.length} killed entities — ${this.entities.length} remain`);
+        }
 
         info(MODULE, "Loading textures...");
         await this.loadTextures();
@@ -335,8 +342,17 @@ export default class Game {
         let x = this.player.x - halfWidth;
         let y = this.player.y - halfHeight;
 
-        x = Math.max(0, Math.min(x, this.map.width - this.viewportWidth));
-        y = Math.max(0, Math.min(y, this.map.height - this.viewportHeight));
+        if (this.map.width < this.viewportWidth) {
+            x = -Math.floor((this.viewportWidth - this.map.width) / 2);
+        } else {
+            x = Math.max(0, Math.min(x, this.map.width - this.viewportWidth));
+        }
+
+        if (this.map.height < this.viewportHeight) {
+            y = -Math.floor((this.viewportHeight - this.map.height) / 2);
+        } else {
+            y = Math.max(0, Math.min(y, this.map.height - this.viewportHeight));
+        }
 
         return { x, y };
     }
@@ -461,6 +477,9 @@ export default class Game {
                 const damage = entity.update(deltaSeconds, this.map, this.player.x, this.player.y);
                 if (damage > 0) {
                     this.takeDamage(damage);
+                    const kbDx = Math.sign(this.player.x - entity.x);
+                    const kbDy = Math.sign(this.player.y - entity.y);
+                    this.knockbackPlayer(kbDx, kbDy);
                 }
             }
         }
@@ -483,11 +502,13 @@ export default class Game {
         const originY = this.player.y;
         debug(MODULE, `movePlayer: attempting (${originX},${originY}) + (${dx},${dy})`);
 
-        // bloquea si hay una entidad en el destino
         const destX = originX + dx;
         const destY = originY + dy;
-        if (this.entities?.find(e => e.x === destX && e.y === destY)) {
-            debug(MODULE, `Movimiento bloqueado — entidad en (${destX},${destY})`);
+        const targetEntity = this.entities?.find(e => e.x === destX && e.y === destY);
+        if (targetEntity) {
+            if (dx < 0) { this.player.facing = "left"; }
+            if (dx > 0) { this.player.facing = "right"; }
+            this.attackEntity(targetEntity);
             return;
         }
 
@@ -577,7 +598,8 @@ export default class Game {
             health: this.health,
             inventory: this.inventory,
             selectedInventoryIndex: this.selectedInventoryIndex,
-            mapChanges: this.mapChanges
+            mapChanges: this.mapChanges,
+            killedEntityIds: this.killedEntityIds
         });
     }
 
@@ -786,28 +808,54 @@ export default class Game {
         this.interactAt(target.x, target.y);
     }
 
-    // X -- ataca al enemigo que tiene enfrente, solo horizontal (izq/der segun facing)
+    attackEntity(entity) {
+        if (this.isDead || this.transition) { return; }
+        entity.health -= 1;
+        debug(MODULE, `Golpe a "${entity.type}" en (${entity.x},${entity.y}) — HP: ${entity.health}/${entity.maxHealth}`);
+        if (entity.health <= 0) {
+            this.entities = this.entities.filter(e => e !== entity);
+            this.killedEntityIds.push(entity.instanceId);
+            this.saveState();
+            info(MODULE, `"${entity.type}" derrotado en (${entity.x},${entity.y})`);
+            this.showMessage(`Derrotaste al ${entity.type}!`);
+        } else {
+            const kbDx = Math.sign(entity.x - this.player.x);
+            const kbDy = Math.sign(entity.y - this.player.y);
+            entity.applyKnockback(kbDx, kbDy, this.map);
+        }
+    }
+
+    knockbackPlayer(dx, dy) {
+        if (this.isDead || this.isAnimating || this.transition) { return; }
+        if (dx === 0 && dy === 0) { return; }
+        const nx = this.player.x + dx;
+        const ny = this.player.y + dy;
+        if (ny < 0 || ny >= this.map.height || nx < 0 || nx >= this.map.width) { return; }
+        const id  = this.map.logic[ny]?.[nx];
+        if (id === undefined) { return; }
+        const def = this.map.definitions.collisions[id];
+        if (!def || def.type === "solid" || def.solid === true) { return; }
+        if (this.entities?.some(e => e.x === nx && e.y === ny)) { return; }
+        if (dx < 0) { this.player.facing = "left"; }
+        if (dx > 0) { this.player.facing = "right"; }
+        this.animateMovement(nx, ny);
+        if (this.animation) { this.animation.progress = 0.55; }
+        this.player.x = nx;
+        this.player.y = ny;
+        debug(MODULE, `Player empujado a (${nx},${ny}) por knockback`);
+    }
+
     attackForward() {
         if (this.isDead || this.transition) { return; }
         const target = this.getInteractionTarget();
         debug(MODULE, `attackForward → (${target.x},${target.y})`);
-
         if (!this.entities || this.entities.length === 0) { return; }
-
         const hit = this.entities.find(e => e.x === target.x && e.y === target.y);
         if (!hit) {
             debug(MODULE, "attackForward: no entity at target");
             return;
         }
-
-        hit.health -= 1;
-        debug(MODULE, `Golpe a "${hit.type}" en (${hit.x},${hit.y}) — HP: ${hit.health}/${hit.maxHealth}`);
-
-        if (hit.health <= 0) {
-            this.entities = this.entities.filter(e => e !== hit);
-            info(MODULE, `"${hit.type}" derrotado en (${target.x},${target.y})`);
-            this.showMessage(`Derrotaste al ${hit.type}!`);
-        }
+        this.attackEntity(hit);
     }
 
     resolveSoundUrl(filename) {
@@ -1063,6 +1111,7 @@ export default class Game {
         this.visualPosition = { x: warp.toX, y: warp.toY };
         this.animation = null;
         this.isAnimating = false;
+        this.killedEntityIds = [];
         this.restoreMapChanges(this.mapChanges);
         this.entities = spawnEntities(this.map);
 
@@ -1136,6 +1185,17 @@ export default class Game {
                     ctx.fillStyle = "#ff0000";
                     ctx.fillRect(ex * this.tileSize, ey * this.tileSize, this.tileSize, this.tileSize);
                 }
+
+                // healthbar sobre el sprite
+                const hpRatio = entity.maxHealth > 0 ? entity.health / entity.maxHealth : 0;
+                const barW    = this.tileSize;
+                const barH    = Math.max(1, Math.round(this.tileSize / 8));
+                const barX    = Math.round(ex * this.tileSize);
+                const barY    = Math.round(ey * this.tileSize) - barH - 1;
+                ctx.fillStyle = "#330000";
+                ctx.fillRect(barX, barY, barW, barH);
+                ctx.fillStyle = hpRatio > 0.5 ? "#22cc44" : hpRatio > 0.25 ? "#ffaa00" : "#cc2200";
+                ctx.fillRect(barX, barY, Math.round(barW * hpRatio), barH);
             }
         }
 

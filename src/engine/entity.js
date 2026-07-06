@@ -162,6 +162,24 @@ export class Entity {
         }
         return this.dead;
     }
+
+    /** Empuja la entidad 1 tile en la direccion (dx,dy). Ignora la posicion del jugador. */
+    applyKnockback(dx, dy, map) {
+        if (this.dead) { return; }
+        const nx = this.x + dx;
+        const ny = this.y + dy;
+        if (ny < 0 || ny >= map.height || nx < 0 || nx >= map.width) { return; }
+        const id  = map.logic[ny]?.[nx];
+        if (id === undefined) { return; }
+        const def = map.definitions.collisions[id];
+        if (!def || !WALKABLE_TYPES.has(def.type)) { return; }
+
+        this.animFrom     = { x: this.x, y: this.y };
+        this.animProgress = 0.55;
+        this.x = nx;
+        this.y = ny;
+        debug(MODULE, `"${this.instanceId}" empujado a (${nx},${ny})`);
+    }
 }
 
  //Escanea el grid logico buscando tiles entity_spawn.
