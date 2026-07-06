@@ -126,7 +126,7 @@ export default class Game {
         };
         this.musicEnabled = true;
         this.entities = [];
-        this.killedEntityIds = [];
+        this.killedEntityIds = {};
         this.inventoryOpen = false;
         debug(MODULE, "Game instance initialized with defaults");
     }
@@ -235,7 +235,14 @@ export default class Game {
             this.selectedInventoryIndex = savedState.selectedInventoryIndex ?? 0;
 
             this.mapChanges = Array.isArray(savedState.mapChanges) ? savedState.mapChanges : [];
-            this.killedEntityIds = Array.isArray(savedState.killedEntityIds) ? savedState.killedEntityIds : [];
+            // Migrate legacy flat-array saves to per-map format
+            if (Array.isArray(savedState.killedEntityIds) && savedState.killedEntityIds.length > 0 && savedState.mapName) {
+                this.killedEntityIds = { [savedState.mapName]: savedState.killedEntityIds };
+            } else if (savedState.killedEntityIds && !Array.isArray(savedState.killedEntityIds)) {
+                this.killedEntityIds = savedState.killedEntityIds;
+            } else {
+                this.killedEntityIds = {};
+            }
 
             debug(MODULE, `Restored inventory (${this.inventory.length} items), mapChanges (${this.mapChanges.length} total across all maps)`);
             this.restoreMapChanges(this.mapChanges);
@@ -248,16 +255,17 @@ export default class Game {
             this.health = this.maxHealth;
             this.selectedInventoryIndex = 0;
             this.mapChanges = [];
-            this.killedEntityIds = [];
+            this.killedEntityIds = {};
         }
 
         this.visualPosition = { x: this.player.x, y: this.player.y };
         debug(MODULE, `Visual position set to (${this.visualPosition.x}, ${this.visualPosition.y})`);
 
         this.entities = spawnEntities(this.map);
-        if (this.killedEntityIds.length > 0) {
-            this.entities = this.entities.filter(e => !this.killedEntityIds.includes(e.instanceId));
-            debug(MODULE, `Filtered ${this.killedEntityIds.length} killed entities — ${this.entities.length} remain`);
+        const _mapKilled = this.killedEntityIds[this.map.name] ?? [];
+        if (_mapKilled.length > 0) {
+            this.entities = this.entities.filter(e => !_mapKilled.includes(e.instanceId));
+            debug(MODULE, `Filtered ${_mapKilled.length} killed entities — ${this.entities.length} remain`);
         }
 
         info(MODULE, "Loading textures...");
@@ -814,7 +822,7 @@ export default class Game {
         debug(MODULE, `Golpe a "${entity.type}" en (${entity.x},${entity.y}) — HP: ${entity.health}/${entity.maxHealth}`);
         if (entity.health <= 0) {
             this.entities = this.entities.filter(e => e !== entity);
-            this.killedEntityIds.push(entity.instanceId);
+            (this.killedEntityIds[this.map.name] ??= []).push(entity.instanceId);
             this.saveState();
             info(MODULE, `"${entity.type}" derrotado en (${entity.x},${entity.y})`);
             this.showMessage(`Derrotaste al ${entity.type}!`);
@@ -828,21 +836,20 @@ export default class Game {
     knockbackPlayer(dx, dy) {
         if (this.isDead || this.isAnimating || this.transition) { return; }
         if (dx === 0 && dy === 0) { return; }
-        const nx = this.player.x + dx;
-        const ny = this.player.y + dy;
-        if (ny < 0 || ny >= this.map.height || nx < 0 || nx >= this.map.width) { return; }
-        const id  = this.map.logic[ny]?.[nx];
-        if (id === undefined) { return; }
-        const def = this.map.definitions.collisions[id];
-        if (!def || def.type === "solid" || def.solid === true) { return; }
-        if (this.entities?.some(e => e.x === nx && e.y === ny)) { return; }
         if (dx < 0) { this.player.facing = "left"; }
         if (dx > 0) { this.player.facing = "right"; }
-        this.animateMovement(nx, ny);
-        if (this.animation) { this.animation.progress = 0.55; }
-        this.player.x = nx;
-        this.player.y = ny;
-        debug(MODULE, `Player empujado a (${nx},${ny}) por knockback`);
+        // Knockback visual-only: nudge 0.2 tiles, sin mover posicion logica, snap muy rapido
+        const px = this.player.x;
+        const py = this.player.y;
+        this.animation = {
+            fromX: px + dx * 0.2,
+            fromY: py + dy * 0.2,
+            toX: px,
+            toY: py,
+            progress: 0.5
+        };
+        this.isAnimating = true;
+        debug(MODULE, `Player knockback visual bump (${dx * 0.2},${dy * 0.2})`);
     }
 
     attackForward() {
@@ -1111,9 +1118,13 @@ export default class Game {
         this.visualPosition = { x: warp.toX, y: warp.toY };
         this.animation = null;
         this.isAnimating = false;
-        this.killedEntityIds = [];
         this.restoreMapChanges(this.mapChanges);
         this.entities = spawnEntities(this.map);
+        const _warpMapKilled = this.killedEntityIds[this.map.name] ?? [];
+        if (_warpMapKilled.length > 0) {
+            this.entities = this.entities.filter(e => !_warpMapKilled.includes(e.instanceId));
+            debug(MODULE, `Warp: filtered ${_warpMapKilled.length} killed entities — ${this.entities.length} remain`);
+        }
 
         debug(MODULE, `Player repositioned to (${this.player.x},${this.player.y}) in new map, visual position snapped`);
 

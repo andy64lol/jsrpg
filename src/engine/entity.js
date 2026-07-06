@@ -163,22 +163,13 @@ export class Entity {
         return this.dead;
     }
 
-    /** Empuja la entidad 1 tile en la direccion (dx,dy). Ignora la posicion del jugador. */
+    /** Knockback visual: pequeño nudge de 0.2 tiles, sin mover la posicion logica. */
     applyKnockback(dx, dy, map) {
         if (this.dead) { return; }
-        const nx = this.x + dx;
-        const ny = this.y + dy;
-        if (ny < 0 || ny >= map.height || nx < 0 || nx >= map.width) { return; }
-        const id  = map.logic[ny]?.[nx];
-        if (id === undefined) { return; }
-        const def = map.definitions.collisions[id];
-        if (!def || !WALKABLE_TYPES.has(def.type)) { return; }
-
-        this.animFrom     = { x: this.x, y: this.y };
-        this.animProgress = 0.55;
-        this.x = nx;
-        this.y = ny;
-        debug(MODULE, `"${this.instanceId}" empujado a (${nx},${ny})`);
+        // Solo visual — la posicion logica no cambia
+        this.animFrom     = { x: this.x + dx * 0.2, y: this.y + dy * 0.2 };
+        this.animProgress = 0.75; // empieza casi al final → animacion muy rapida
+        debug(MODULE, `"${this.instanceId}" knockback visual bump`);
     }
 }
 

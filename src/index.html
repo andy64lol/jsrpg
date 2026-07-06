@@ -22,7 +22,7 @@
         align-items: center;
         justify-content: center;
         background: #000000;
-        color: #edf2ff;
+        color: #ffffff;
         font-family: "PixeloidMono", monospace, system-ui, sans-serif;
       }
 
@@ -118,10 +118,10 @@
         width: 100%;
         margin-top: 8px;
         padding: 8px;
-        border: 1px solid #edf2ff33;
+        border: 1px solid rgba(255,255,255,0.2);
         border-radius: 6px;
         background: rgba(255,255,255,0.06);
-        color: #edf2ff;
+        color: #ffffff;
         cursor: pointer;
         font-family: "PixeloidMono", monospace, system-ui, sans-serif;
         font-size: 12px;
@@ -236,7 +236,7 @@
       }
       .inv-slot-fallback {
         font-size: 22px;
-        color: #edf2ff;
+        color: #ffffff;
         opacity: 0.6;
       }
 
@@ -395,9 +395,7 @@
   <body>
     <div id="startScreen">
       <img src="./assets/UI/menu/game_title.png" class="start-logo" alt="JSRPG" />
-      <button class="start-img-btn" id="btnNewGame" type="button" aria-label="New Game">
-        <img src="./assets/UI/menu/play_button.png" alt="New Game" />
-      </button>
+      <button class="start-btn-text" id="btnNewGame" type="button" aria-label="New Game">New Game</button>
       <button class="start-btn-text" id="btnContinue" type="button" style="display:none">Continue</button>
       <div class="start-hint">arrow keys / wasd to move</div>
     </div>
