@@ -2,6 +2,8 @@
 
 RPG de navegador con tiles de 8×8, escrito en JS vanilla.
 
+![Screenshot del juego](screenshot.png)
+
 ## Cómo correr
 
 ```bash
