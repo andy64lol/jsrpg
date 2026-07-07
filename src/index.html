@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JSRPG demo</title>
+    <title>JSRPG</title>
     <style>
       * { box-sizing: border-box; }
 
+      /* fuente pixelada */
       @font-face {
         font-family: "PixeloidMono";
         src: url("./assets/UI/font/PixeloidMono-nAOpP.ttf") format("truetype");
@@ -41,8 +42,8 @@
         display: block;
       }
 
-      
-.hud {
+      /* hud de corazones */
+      .hud {
         position: fixed;
         top: 12px;
         left: 12px;
@@ -57,6 +58,7 @@
         height: 24px;
       }
 
+      /* boton de ajustes arriba derecha */
       .settings-button {
         position: fixed;
         top: 12px;
@@ -67,7 +69,6 @@
         background: transparent;
         cursor: pointer;
         outline: none;
-
       }
       .settings-button img {
         display: block;
@@ -76,6 +77,8 @@
         image-rendering: crisp-edges;
         image-rendering: pixelated;
       }
+
+      /* panel de ajustes */
       .settings-panel {
         position: fixed;
         top: 84px;
@@ -131,6 +134,7 @@
       .settings-text-btn.danger:hover { border-color: #ff5f5f; background: rgba(255,95,95,0.1); }
       #importFileInput { display: none; }
 
+      /* mensajes del juego abajo */
       .message {
         position: fixed;
         bottom: 24px;
@@ -150,6 +154,7 @@
         white-space: nowrap;
       }
 
+      /* inventario overlay */
       .inv-overlay {
         position: fixed;
         inset: 0;
@@ -219,14 +224,8 @@
         transition: border-color 0.12s, background 0.12s;
         position: relative;
       }
-      .inv-slot:hover {
-        border-color: rgba(255,255,255,0.4);
-        background: rgba(255,255,255,0.07);
-      }
-      .inv-slot.selected {
-        border-color: #fff;
-        background: rgba(255,255,255,0.1);
-      }
+      .inv-slot:hover { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.07); }
+      .inv-slot.selected { border-color: #fff; background: rgba(255,255,255,0.1); }
       .inv-slot-icon {
         width: 48px;
         height: 48px;
@@ -234,11 +233,7 @@
         image-rendering: pixelated;
         display: block;
       }
-      .inv-slot-fallback {
-        font-size: 22px;
-        color: #ffffff;
-        opacity: 0.6;
-      }
+      .inv-slot-fallback { font-size: 22px; color: #ffffff; opacity: 0.6; }
 
       .inv-empty-msg {
         grid-column: 1 / -1;
@@ -270,39 +265,11 @@
         padding: 6px;
         background: rgba(0,0,0,0.3);
       }
-      .inv-detail-name {
-        font-size: 12px;
-        color: #fff;
-        text-align: center;
-        line-height: 1.4;
-        word-break: break-word;
-      }
-      .inv-detail-desc {
-        font-size: 10px;
-        color: rgba(255,255,255,0.55);
-        text-align: center;
-        line-height: 1.5;
-      }
-      .inv-detail-stat {
-        font-size: 11px;
-        color: #fff;
-        text-align: center;
-      }
-      .inv-detail-placeholder {
-        font-size: 10px;
-        color: rgba(255,255,255,0.2);
-        text-align: center;
-        margin-top: auto;
-        line-height: 1.6;
-      }
-      .inv-detail-use {
-        margin-top: auto;
-        font-size: 10px;
-        color: rgba(255,255,255,0.35);
-        text-align: center;
-      }
-
-
+      .inv-detail-name { font-size: 12px; color: #fff; text-align: center; line-height: 1.4; word-break: break-word; }
+      .inv-detail-desc { font-size: 10px; color: rgba(255,255,255,0.55); text-align: center; line-height: 1.5; }
+      .inv-detail-stat { font-size: 11px; color: #fff; text-align: center; }
+      .inv-detail-placeholder { font-size: 10px; color: rgba(255,255,255,0.2); text-align: center; margin-top: auto; line-height: 1.6; }
+      .inv-detail-use { margin-top: auto; font-size: 10px; color: rgba(255,255,255,0.35); text-align: center; }
 
       .inv-footer {
         display: flex;
@@ -319,7 +286,6 @@
         align-items: center;
         gap: 4px;
       }
-
       .inv-kbd {
         display: inline-block;
         background: rgba(255,255,255,0.08);
@@ -332,6 +298,7 @@
         line-height: 1.4;
       }
 
+      /* pantalla de inicio */
       #startScreen {
         position: fixed;
         inset: 0;
@@ -351,24 +318,6 @@
         height: 128px;
         margin-bottom: 16px;
       }
-      .start-img-btn {
-        background: transparent;
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        image-rendering: crisp-edges;
-        image-rendering: pixelated;
-        display: block;
-      }
-      .start-img-btn img {
-        width: 128px;
-        height: 64px;
-        image-rendering: crisp-edges;
-        image-rendering: pixelated;
-        display: block;
-        transition: opacity 0.1s;
-      }
-      .start-img-btn:hover img { opacity: 0.75; }
       .start-btn-text {
         font-family: "PixeloidMono", monospace;
         font-size: 11px;
@@ -393,81 +342,82 @@
   </head>
 
   <body>
+    <!-- pantalla de inicio -->
     <div id="startScreen">
       <img src="./assets/UI/menu/game_title.png" class="start-logo" alt="JSRPG" />
-      <button class="start-btn-text" id="btnNewGame" type="button" aria-label="New Game">New Game</button>
-      <button class="start-btn-text" id="btnContinue" type="button" style="display:none">Continue</button>
-      <div class="start-hint">arrow keys / wasd to move</div>
+      <button class="start-btn-text" id="btnNewGame" type="button">Nueva Partida</button>
+      <button class="start-btn-text" id="btnContinue" type="button" style="display:none">Continuar</button>
+      <div class="start-hint">flechas / wasd pa moverse</div>
     </div>
 
     <div class="game-container">
-      <canvas id="game" width="56" height="56" aria-label="RPG game window"></canvas>
-      <div id="hud" class="hud" aria-label="health display"></div>
+      <canvas id="game" width="56" height="56" aria-label="ventana del juego"></canvas>
+      <div id="hud" class="hud" aria-label="salud"></div>
     </div>
 
     <div id="message" class="message" aria-live="polite"></div>
 
+    <!-- inventario -->
     <div id="inventoryOverlay" class="inv-overlay" aria-hidden="true" role="dialog" aria-label="Inventario">
       <div class="inv-panel">
-
         <div class="inv-header">
           <span class="inv-title">Inventario</span>
           <span class="inv-header-hint"><kbd class="inv-kbd">I</kbd> cerrar</span>
         </div>
-
         <div class="inv-body">
           <div class="inv-grid-wrap">
-            <div id="inventoryGrid" class="inv-grid">
-            </div>
+            <div id="inventoryGrid" class="inv-grid"></div>
           </div>
           <div class="inv-detail" id="inventoryDetail">
             <p class="inv-detail-placeholder">Selecciona<br>un objeto</p>
           </div>
         </div>
-
         <div class="inv-footer">
           <span class="inv-footer-hint"><kbd class="inv-kbd">E</kbd> Usar</span>
           <span class="inv-footer-hint"><kbd class="inv-kbd">[</kbd><kbd class="inv-kbd">]</kbd> Navegar</span>
           <span class="inv-footer-hint"><kbd class="inv-kbd">I</kbd> / <kbd class="inv-kbd">ESC</kbd> Cerrar</span>
         </div>
-
       </div>
     </div>
 
-    <button id="settingsButton" class="settings-button" type="button" aria-label="Settings" title="Settings">
+    <!-- boton de ajustes -->
+    <button id="settingsButton" class="settings-button" type="button" aria-label="Ajustes" title="Ajustes">
       <img id="settingsButtonImg"
            src="./assets/UI/buttons/settings.png"
            data-normal="./assets/UI/buttons/settings.png"
            data-hover="./assets/UI/buttons/settings_hover.png"
-           alt="Settings" />
+           alt="Ajustes" />
     </button>
 
     <div id="settingsPanel" class="settings-panel" aria-hidden="true">
-      <div class="settings-panel-title">Settings</div>
+      <div class="settings-panel-title">Ajustes</div>
 
-      <button id="downloadSaveButton" class="settings-img-btn" type="button" aria-label="Download save file">
+      <button id="downloadSaveButton" class="settings-img-btn" type="button" aria-label="Descargar partida">
         <img src="./assets/UI/buttons/save.png"
              data-normal="./assets/UI/buttons/save.png"
              data-hover="./assets/UI/buttons/save_hover.png"
-             alt="Download Save" />
+             alt="Descargar partida" />
       </button>
 
-      <button id="importSaveButton" class="settings-img-btn" type="button" aria-label="Import save file">
+      <button id="importSaveButton" class="settings-img-btn" type="button" aria-label="Importar partida">
         <img src="./assets/UI/buttons/load.png"
              data-normal="./assets/UI/buttons/load.png"
              data-hover="./assets/UI/buttons/load_hover.png"
-             alt="Import Save" />
+             alt="Importar partida" />
       </button>
       <input type="file" id="importFileInput" accept=".json" />
 
-      <button id="toggleMusicButton" class="settings-text-btn" type="button">Toggle Music</button>
-      <button id="clearSaveButton" class="settings-text-btn danger" type="button">Reset Save</button>
+      <button id="toggleMusicButton" class="settings-text-btn" type="button">Música</button>
+      <button id="clearSaveButton" class="settings-text-btn danger" type="button">Reiniciar</button>
+      <!-- boton del editor, solo visible en local -->
+      <button id="btnEditor" class="settings-text-btn" type="button" style="display:none">Editor de Mapas</button>
     </div>
 
     <script type="module">
       import Game from "./engine/index.js";
 
-      const KEY_DIRECTIONS = {
+      // teclas de movimiento
+      const TECLAS_MOVIMIENTO = {
         w: true, arrowup: true,
         s: true, arrowdown: true,
         a: true, arrowleft: true,
@@ -487,11 +437,13 @@
       const toggleMusicButton = document.getElementById("toggleMusicButton");
       const clearSaveButton  = document.getElementById("clearSaveButton");
       const canvas           = document.getElementById("game");
+      const btnEditor        = document.getElementById("btnEditor");
 
-      // pasa el grid como inventoryElement para que drawInventoryUI() lo llene
       const game = new Game(canvas, hud, inventoryGrid, messageElement);
+      // expone el juego pa que el editor lo pueda pausar
+      window.__game = game;
 
-      // Inventario cerrar o abrir
+      // abre o cierra el inventario
       function setInventoryOpen(open) {
         game.setInventoryOpen(open);
         inventoryOverlay.classList.toggle("open", open);
@@ -502,7 +454,7 @@
         }
       }
 
-      // detalles del item que vos agarras o hover
+      // detalle del item seleccionado
       function renderInventoryDetail(hoveredIndex) {
         const idx    = hoveredIndex ?? game.selectedInventoryIndex;
         const itemId = game.inventory?.[idx];
@@ -518,15 +470,15 @@
 
         const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
         let stat = "";
-        if (item.use?.action === "heal")      stat = `+${item.use.amount} HP`;
-        else if (item.type === "consumable")  stat = "Consumible";
+        if (item.use?.action === "heal")     stat = `+${item.use.amount} HP`;
+        else if (item.type === "consumable") stat = "Consumible";
 
         inventoryDetail.innerHTML = `
           ${item.texture ? `<img src="${item.texture}" class="inv-detail-icon" alt="">` : ""}
           <div class="inv-detail-name">${esc(item.display_name ?? itemId)}</div>
           ${item.description ? `<div class="inv-detail-desc">${esc(item.description)}</div>` : ""}
           ${stat             ? `<div class="inv-detail-stat">${esc(stat)}</div>` : ""}
-          <div class="inv-detail-use"><kbd class="inv-kbd">E</kbd> para usar</div>
+          <div class="inv-detail-use"><kbd class="inv-kbd">E</kbd> pa usar</div>
         `;
       }
 
@@ -536,20 +488,20 @@
           inventoryGrid.innerHTML = `<div class="inv-empty-msg">Inventario vacío</div>`;
         }
       }
-      
+
       inventoryGrid.addEventListener("click", (e) => {
         const slot = e.target.closest(".inv-slot");
-        if (!slot) { return; }
+        if (!slot) return;
         const idx = Number(slot.dataset.index);
         game.selectedInventoryIndex = idx;
-        game._inventoryRenderKey = null; // fuerza re-renderizarlo
+        game._inventoryRenderKey = null;
         renderInventoryGrid();
         renderInventoryDetail();
       });
 
       inventoryGrid.addEventListener("mouseover", (e) => {
         const slot = e.target.closest(".inv-slot");
-        if (slot) { renderInventoryDetail(Number(slot.dataset.index)); }
+        if (slot) renderInventoryDetail(Number(slot.dataset.index));
       });
       inventoryGrid.addEventListener("mouseout", (e) => {
         if (!e.relatedTarget || !inventoryGrid.contains(e.relatedTarget)) {
@@ -557,27 +509,21 @@
         }
       });
 
-// auto abrir el inventario cuando agarras vos algo
+      // abre inventario automaticamente al agarrar item
       game.onInventoryChanged = () => {
-        if (!game.inventoryOpen) {
-          setInventoryOpen(true);
-        } else {
-          renderInventoryGrid();
-          renderInventoryDetail();
-        }
+        if (!game.inventoryOpen) setInventoryOpen(true);
+        else { renderInventoryGrid(); renderInventoryDetail(); }
       };
 
       const _origDraw = game.drawInventoryUI.bind(game);
       game.drawInventoryUI = function () {
         _origDraw();
-        if (game.inventoryOpen) { renderInventoryDetail(); }
+        if (game.inventoryOpen) renderInventoryDetail();
       };
 
       async function init(freshStart) {
         try {
-          if (freshStart) {
-            game.clearSave();
-          }
+          if (freshStart) game.clearSave();
           await game.start("map1");
           requestAnimationFrame(loop);
         } catch (err) {
@@ -591,12 +537,11 @@
         requestAnimationFrame(loop);
       }
 
-      const startScreen  = document.getElementById("startScreen");
-      const btnNewGame   = document.getElementById("btnNewGame");
-      const btnContinue  = document.getElementById("btnContinue");
+      const startScreen = document.getElementById("startScreen");
+      const btnNewGame  = document.getElementById("btnNewGame");
+      const btnContinue = document.getElementById("btnContinue");
 
-      const hasSave = !!localStorage.getItem("jsrpg_save");
-      if (hasSave) {
+      if (localStorage.getItem("jsrpg_save")) {
         btnContinue.style.display = "";
       }
 
@@ -604,17 +549,15 @@
         startScreen.classList.add("hidden");
         init(true);
       });
-
       btnContinue.addEventListener("click", () => {
         startScreen.classList.add("hidden");
         init(false);
       });
 
-      //los configuraciones o settings esos
-      
+      // hover en botones con imagen
       function attachHoverSprite(buttonEl) {
         const img = buttonEl.querySelector("img[data-hover]");
-        if (!img) { return; }
+        if (!img) return;
         buttonEl.addEventListener("pointerenter", () => { img.src = img.dataset.hover; });
         buttonEl.addEventListener("pointerleave", () => { img.src = img.dataset.normal; });
         buttonEl.addEventListener("blur",         () => { img.src = img.dataset.normal; });
@@ -631,7 +574,7 @@
       });
 
       document.addEventListener("pointerdown", (e) => {
-        if (settingsPanel.style.display !== "block") { return; }
+        if (settingsPanel.style.display !== "block") return;
         if (!settingsPanel.contains(e.target) && e.target !== settingsButton && !settingsButton.contains(e.target)) {
           settingsPanel.style.display = "none";
           settingsPanel.setAttribute("aria-hidden", "true");
@@ -640,15 +583,40 @@
 
       downloadSaveBtn.addEventListener("click",  () => { game.downloadSave(); });
       importSaveBtn.addEventListener("click",    () => { importFileInput.value = ""; importFileInput.click(); });
-      importFileInput.addEventListener("change", () => { if (importFileInput.files[0]) { game.importSave(importFileInput.files[0]); } });
+      importFileInput.addEventListener("change", () => { if (importFileInput.files[0]) game.importSave(importFileInput.files[0]); });
       toggleMusicButton.addEventListener("click",() => { game.toggleMusic(); });
       clearSaveButton.addEventListener("click",  () => { game.clearSave(); window.location.reload(); });
 
+      // editor solo en local
+      const esLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      let editor = null;
+      if (esLocal) {
+        import("./editor/editor.js").then(mod => {
+          editor = mod.editor;
+          btnEditor.style.display = "";
+          btnEditor.addEventListener("click", () => {
+            settingsPanel.style.display = "none";
+            editor.abrir();
+          });
+        });
+      }
+
       window.addEventListener("keydown", event => {
-        if (event.defaultPrevented) { return; }
+        if (event.defaultPrevented) return;
         const key = event.key.toLowerCase();
 
-        if (KEY_DIRECTIONS[key]) {
+        // backtick abre/cierra el editor (solo local)
+        if (key === "`" && editor) {
+          event.preventDefault();
+          if (editor.estaAbierto()) editor.cerrar();
+          else editor.abrir();
+          return;
+        }
+
+        // bloquea teclas del juego si el editor esta abierto
+        if (editor?.estaAbierto()) return;
+
+        if (TECLAS_MOVIMIENTO[key]) {
           event.preventDefault();
           game.setMoveKey(key, true);
           return;
@@ -662,7 +630,7 @@
 
         if (key === "escape") {
           event.preventDefault();
-          if (game.inventoryOpen) { setInventoryOpen(false); }
+          if (game.inventoryOpen) setInventoryOpen(false);
           return;
         }
 
@@ -702,14 +670,15 @@
 
       window.addEventListener("keyup", event => {
         const key = event.key.toLowerCase();
-        if (KEY_DIRECTIONS[key]) {
+        if (TECLAS_MOVIMIENTO[key]) {
           event.preventDefault();
           game.setMoveKey(key, false);
         }
       });
 
+      // interactuar con clic en el canvas
       canvas.addEventListener("click", event => {
-        if (game.inventoryOpen) { return; }
+        if (game.inventoryOpen) return;
         const rect   = canvas.getBoundingClientRect();
         const scaleX = canvas.width  / rect.width;
         const scaleY = canvas.height / rect.height;
@@ -720,5 +689,4 @@
       });
     </script>
   </body>
-<!-- eso es todo -->
 </html>

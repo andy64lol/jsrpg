@@ -1,4 +1,4 @@
-// debuggear
+// logs pa debuggear nomas
 
 const PREFIX = "[JSRPG]";
 

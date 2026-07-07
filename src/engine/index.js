@@ -665,10 +665,10 @@ export default class Game {
                 const oldHealth = this.health;
                 this.health = Math.min(this.maxHealth, this.health + Number(amount));
                 info(MODULE, `Item used: "${item.display_name}" healed ${amount} HP — health: ${oldHealth} → ${this.health}`);
-                this.showMessage(`Used ${item.display_name}! Restored ${this.health - oldHealth} HP.`);
+                this.showMessage(`¡Usaste ${item.display_name}! +${this.health - oldHealth} HP.`);
             } else {
                 debug(MODULE, `Item "${item.display_name}" consumed but no heal action taken (action="${action}", amount=${amount})`);
-                this.showMessage(`Used ${item.display_name}.`);
+                this.showMessage(`Usaste ${item.display_name}.`);
             }
 
             const removedIndex = this.selectedInventoryIndex;
@@ -766,7 +766,7 @@ export default class Game {
             }
             this.applyMapChange(tileX, tileY, Number(def.afterOpeningCollision ?? 0), def.afterOpeningTile ? Number(def.afterOpeningTile) : undefined);
 
-            const message = def.afterInteractText || "You opened the chest.";
+            const message = def.afterInteractText || "Abriste el cofre.";
             this.showMessage(message);
             this.saveState();
         }
@@ -977,7 +977,7 @@ export default class Game {
         const raw = localStorage.getItem("jsrpg_save");
         if (!raw) {
             warn(MODULE, "downloadSave: no save data found");
-            this.showMessage("No save data to download.");
+            this.showMessage("No hay partida guardada.");
             return;
         }
         info(MODULE, `downloadSave: exporting ${raw.length} bytes as jsrpg_save.json`);
@@ -990,7 +990,7 @@ export default class Game {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        this.showMessage("Save downloaded!");
+        this.showMessage("¡Guardado!");
     }
 
     async importSave(file) {
@@ -1024,7 +1024,7 @@ export default class Game {
             window.location.reload();
         } catch (err) {
             error(MODULE, "importSave: invalid save file:", err.message);
-            this.showMessage("Invalid save file.");
+            this.showMessage("Archivo inválido.");
         }
     }
 
@@ -1247,7 +1247,7 @@ export default class Game {
             ctx.font = `${Math.max(12, this.tileSize * 1.25)}px sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText("you died...", this.canvas.width / 2, this.canvas.height / 2);
+            ctx.fillText("moriste...", this.canvas.width / 2, this.canvas.height / 2);
             return;
         }
 

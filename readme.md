@@ -1,15 +1,40 @@
 # JSRPG
----
-This is a small browser RPG template that uses 8x8 tiles.
 
-![Screenshot](./screenshot.png)
+RPG de navegador con tiles de 8×8, escrito en JS vanilla.
 
-Start the game by opening `src/index.html` in a web server or browser.
+## Cómo correr
 
-Controls:
-- Arrow keys and WASD to move the player. Try to avoid the spikes.
-- Walk into an enemy to attack it. They hit back.
+```bash
+python server.py
+```
 
-Enemies show a health bar above their sprite — green when healthy, orange when hurt, red when nearly dead. Each hit knocks them one tile back. They do the same to you.
+Abre el preview en el puerto 5000.
 
-The game loads `map1` first and supports map warp by stepping on door tiles defined in `definitions.jsonc`.
+## Controles
+
+- **Flechas / WASD** — moverse
+- **X** — atacar
+- **F / clic** — interactuar (cofres, fuentes, puertas)
+- **I** — inventario
+
+## Editor de mapas
+
+Solo disponible en el servidor local. Abrilo con la tecla **\`** (acento grave) o desde el menú de ajustes.
+
+Funciones del editor:
+- Editar tiles visuales y de colisión por separado
+- Pincel o relleno tipo flood-fill
+- Click derecho = cuentagotas
+- Guardar cambios directo al disco
+
+## Estructura
+
+```
+src/
+  engine/     motore del juego
+  maps/       mapas (CSV + definitions.jsonc)
+  assets/     sprites, tiles, UI, sonidos
+  editor/     editor de mapas (solo local)
+  index.html  punto de entrada
+server.py     servidor HTTP con API de escritura pa el editor
+```
