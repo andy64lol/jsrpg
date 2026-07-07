@@ -84,7 +84,7 @@ export default class Game {
         this.uiImages = {};
         this.config = {
             player: {
-                speed: 2,
+                speed: 5,
                 gliding: {
                     enabled: true,
                     duration: 0.12
@@ -825,7 +825,9 @@ export default class Game {
             (this.killedEntityIds[this.map.name] ??= []).push(entity.instanceId);
             this.saveState();
             info(MODULE, `"${entity.type}" derrotado en (${entity.x},${entity.y})`);
-            this.showMessage(`Derrotaste al ${entity.type}!`);
+            const NOMBRES = { bat: 'murciélago', bat_oscuro: 'murciélago oscuro' };
+            const nombreEnemigo = NOMBRES[entity.type] ?? entity.type;
+            this.showMessage(`¡Derrotaste al ${nombreEnemigo}!`);
         } else {
             const kbDx = Math.sign(entity.x - this.player.x);
             const kbDy = Math.sign(entity.y - this.player.y);

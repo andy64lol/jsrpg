@@ -1,7 +1,7 @@
 // editor de mapas -- solo funciona en servidor local
 
 const TILE_PX = 24;
-const MAPAS = ['map1', 'map2', 'map3'];
+const MAPAS = ['map1','map2','map3','map4','map5','map6','map7','map8','map9','map10','map11','map12'];
 
 // colores pa tipos de colision
 const TIPO_COLOR = {
@@ -98,7 +98,7 @@ export class Editor {
             flexShrink: '0', flexWrap: 'wrap',
         });
 
-        barra.appendChild(this._span('EDITOR', 'font-size:13px;letter-spacing:.12em;opacity:.4;margin-right:6px;'));
+        barra.appendChild(this._span('MAPA', 'font-size:13px;letter-spacing:.12em;opacity:.4;margin-right:6px;'));
 
         // selector de mapa
         this.selMapa = document.createElement('select');

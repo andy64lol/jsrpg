@@ -9,13 +9,16 @@
     "collisions": {
         "0": { "type": "air" },
         "1": { "type": "solid" },
-        "2": {
+        "3": {
             "type": "door",
-            "target_map": "map2",
-            "target_tile": { "x": 6, "y": 4 }
+            "target_map": "map8",
+            "target_tile": { "x": 5, "y": 9 }
         },
-        "3": { "type": "player_damage", "damage": 1 },
-        "4": {
+        "4": { "type": "player_damage", "damage": 1 },
+        "5": { "type": "entity_spawn", "entity": "bat_oscuro", "floorCollision": 0 },
+        "6": { "type": "entity_spawn", "entity": "bat_oscuro", "floorCollision": 0 },
+        "7": { "type": "entity_spawn", "entity": "bat_oscuro", "floorCollision": 0 },
+        "8": {
             "type": "chest",
             "contains": "redApple",
             "solid": true,
@@ -23,11 +26,16 @@
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
             "afterOpeningCollision": "0",
             "afterOpeningTile": "1"
-        },
-        "5": {
-            "type": "door",
-            "target_map": "map5",
-            "target_tile": { "x": 7, "y": 2 }
+        }
+    },
+    "entities": {
+        "bat_oscuro": {
+            "sprite": "assets/sprites/enemy/bat.png",
+            "health": 5,
+            "damage": 2,
+            "speed": 2,
+            "behavior": "chase",
+            "chaseRadius": 6
         }
     }
 }

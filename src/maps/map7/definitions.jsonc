@@ -3,19 +3,24 @@
         "0": "assets/tiles/pared_dungeon_verde.png",
         "1": "assets/tiles/suelo_dungeon_verde.png",
         "2": "assets/tiles/pared_puerta_dungeon_verde.png",
-        "3": "assets/tiles/suelo_dungeon_verde_pinchos.png",
         "4": "assets/tiles/chest.png"
     },
     "collisions": {
         "0": { "type": "air" },
         "1": { "type": "solid" },
-        "2": {
+        "3": {
             "type": "door",
-            "target_map": "map2",
-            "target_tile": { "x": 6, "y": 4 }
+            "target_map": "map4",
+            "target_tile": { "x": 5, "y": 6 }
         },
-        "3": { "type": "player_damage", "damage": 1 },
-        "4": {
+        "5": { "type": "entity_spawn", "entity": "bat", "floorCollision": 0 },
+        "6": { "type": "entity_spawn", "entity": "bat", "floorCollision": 0 },
+        "7": {
+            "type": "door",
+            "target_map": "map10",
+            "target_tile": { "x": 2, "y": 5 }
+        },
+        "8": {
             "type": "chest",
             "contains": "redApple",
             "solid": true,
@@ -23,11 +28,16 @@
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
             "afterOpeningCollision": "0",
             "afterOpeningTile": "1"
-        },
-        "5": {
-            "type": "door",
-            "target_map": "map5",
-            "target_tile": { "x": 7, "y": 2 }
+        }
+    },
+    "entities": {
+        "bat": {
+            "sprite": "assets/sprites/enemy/bat.png",
+            "health": 3,
+            "damage": 1,
+            "speed": 1.5,
+            "behavior": "patrol",
+            "chaseRadius": 5
         }
     }
 }

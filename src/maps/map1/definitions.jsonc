@@ -43,11 +43,13 @@
         },
         "5":{
             "type": "entity_spawn",
-            "entity": "bat"
+            "entity": "bat",
+            "floorCollision": 0
         },
         "6":{
             "type": "entity_spawn",
-            "entity": "bat"
+            "entity": "bat",
+            "floorCollision": 0
         }
     },
     "entities":{ //así se define las entidades, aún en proceso de añadir más IA y comportamientos

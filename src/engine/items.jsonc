@@ -2,8 +2,8 @@
     "redApple": {
         "id": "redApple",
         "texture": "assets/items/apple.png",
-        "display_name": "Apple",
-        "description": "A juicy red apple. Restores a small amount of health.",
+        "display_name": "Manzana Roja",
+        "description": "Una manzana roja jugosa. Restaura un poco de salud.",
         "type": "consumable",
         "use": {
             "action": "heal",
