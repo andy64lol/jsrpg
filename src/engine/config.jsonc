@@ -11,8 +11,8 @@
     },
     "map":{
         "tile_size": 8,
-        "viewport_width":  10,
-        "viewport_height": 10
+        "viewport_width":  16,
+        "viewport_height": 16
     },
     "UI":{
         "size": 1

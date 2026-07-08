@@ -69,7 +69,7 @@ async function loadFlexJSON(url) {
 }
 
 export default class Game {
-    constructor(canvas, hudElement = null, inventoryElement = null, messageElement = null, equipmentElement = null) {
+    constructor(canvas, hudElement = null, inventoryElement = null, messageElement = null, equipmentElement = null, minimapElement = null, levelElement = null) {
         debug(MODULE, "Game constructor called");
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
@@ -77,6 +77,10 @@ export default class Game {
         this.inventoryElement = inventoryElement;
         this.messageElement = messageElement;
         this.equipmentElement = equipmentElement;
+        this.minimapElement = minimapElement;
+        this.levelElement = levelElement;
+        this.tileColorCache = {};
+        this._minimapKey = null;
         this.map = null;
         this.player = null;
         this.imageCache = {};
@@ -294,6 +298,8 @@ export default class Game {
             });
         }
 
+        this.buildTileColorCache();
+        this.updateLevelDisplay();
         this.draw();
         info(MODULE, "Game started successfully — entering game loop");
         return this;
@@ -431,8 +437,8 @@ export default class Game {
         const deltaSeconds = this.lastUpdate ? (now - this.lastUpdate) / 1000 : 0;
         this.lastUpdate = now;
 
-        // pausa completa cuando el inventario esta abierto
-        if (this.inventoryOpen) { return; }
+        // pausa cuando inventario o equipamiento esta abierto
+        if (this.inventoryOpen || this.equipmentOpen) { return; }
 
         if (this.isAnimating && this.animation) {
             this.animation.progress += deltaSeconds / this.getGlideDuration();
@@ -1156,6 +1162,9 @@ export default class Game {
         await this.loadTextures();
         this.resizeCanvas();
         this.applyTileEffects(this.player.x, this.player.y);
+        this.buildTileColorCache();
+        this.updateLevelDisplay();
+        this._minimapKey = null;
         this.saveState();
 
         if (this.transition) {
@@ -1273,6 +1282,7 @@ export default class Game {
         this.drawHealthUI();
         this.drawInventoryUI();
         this.drawLevelUI();
+        this.drawMinimap();
 
         if (this.isDead) {
             ctx.fillStyle = "rgba(0, 0, 0, 0.95)";
@@ -1436,11 +1446,15 @@ export default class Game {
         if (!itemId) return false;
         this.equipment[slot] = null;
         this.inventory.push(itemId);
+        // ajusta seleccion si estaba fuera de rango
+        if (this.selectedInventoryIndex >= this.inventory.length) {
+            this.selectedInventoryIndex = this.inventory.length - 1;
+        }
         const def = this.itemDefinitions[itemId];
         info(MODULE, `Desequipado: "${itemId}" de slot "${slot}"`);
         this.showMessage(`Desequipaste: ${def?.display_name ?? itemId}`);
         this.saveState();
-        this.onInventoryChanged?.();
+        // no llamar onInventoryChanged -- los llamadores ya actualizan la UI
         this.onEquipmentChanged?.();
         return true;
     }
@@ -1468,7 +1482,14 @@ export default class Game {
 
     setEquipmentOpen(open) {
         this.equipmentOpen = open;
-        this.inventoryOpen = open; // pausa el juego mientras está abierto
+        if (open) {
+            // guarda estado del inventario y pausa el juego
+            this._invAbiertoAntesDeEquipo = this.inventoryOpen;
+            this.inventoryOpen = true;
+        } else {
+            // restaura estado previo del inventario
+            this.inventoryOpen = this._invAbiertoAntesDeEquipo ?? false;
+        }
     }
 
     // --- UI de equipamiento ---
@@ -1514,5 +1535,66 @@ export default class Game {
         if (!this._expFill)    this._expFill    = document.getElementById("expBarFill");
         if (this._levelLabel)  this._levelLabel.textContent = `Nv.${this.level}`;
         if (this._expFill)     this._expFill.style.width = `${Math.round(this.exp / this.expToNextLevel * 100)}%`;
+    }
+
+    // guarda color promedio de cada tile pa el minimapa
+    buildTileColorCache() {
+        if (!this.map) return;
+        this.tileColorCache = {};
+        const tmp = document.createElement('canvas');
+        tmp.width = 1; tmp.height = 1;
+        const ctx = tmp.getContext('2d');
+        for (const [id, src] of Object.entries(this.map.definitions.tiles)) {
+            const img = this.tileImages[src];
+            if (!img) continue;
+            ctx.drawImage(img, 0, 0, 1, 1);
+            const d = ctx.getImageData(0, 0, 1, 1).data;
+            this.tileColorCache[id] = `rgb(${d[0]},${d[1]},${d[2]})`;
+        }
+    }
+
+    // dibuja minimapa en el canvas externo, throttleado por posicion
+    drawMinimap() {
+        if (!this.minimapElement || !this.map) return;
+        const clave = `${this.map.name}|${this.player.x},${this.player.y}`;
+        if (clave === this._minimapKey) return;
+        this._minimapKey = clave;
+
+        const el = this.minimapElement;
+        const mapW = this.map.width;
+        const mapH = this.map.height;
+        // escala pa que quepa en el canvas del minimapa
+        const escX = el.width  / mapW;
+        const escY = el.height / mapH;
+        const ctx = el.getContext('2d');
+        ctx.clearRect(0, 0, el.width, el.height);
+
+        for (let y = 0; y < mapH; y++) {
+            for (let x = 0; x < mapW; x++) {
+                const id = this.map.map[y]?.[x];
+                ctx.fillStyle = this.tileColorCache[id] ?? '#111';
+                ctx.fillRect(
+                    Math.round(x * escX), Math.round(y * escY),
+                    Math.max(1, Math.round(escX)), Math.max(1, Math.round(escY))
+                );
+            }
+        }
+
+        // punto blanco = jugador
+        ctx.fillStyle = '#fff';
+        const pw = Math.max(2, Math.round(escX * 1.5));
+        const ph = Math.max(2, Math.round(escY * 1.5));
+        ctx.fillRect(
+            Math.round(this.player.x * escX - pw / 2),
+            Math.round(this.player.y * escY - ph / 2),
+            pw, ph
+        );
+    }
+
+    // actualiza el label de nivel externo
+    updateLevelDisplay() {
+        if (this.levelElement) {
+            this.levelElement.textContent = `Nv.${this.level}`;
+        }
     }
 }

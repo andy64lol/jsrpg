@@ -33,8 +33,8 @@
       }
 
       canvas {
-        width: 560px;
-        height: 560px;
+        width: 512px;
+        height: 512px;
         image-rendering: crisp-edges;
         image-rendering: pixelated;
         border: 4px solid #000000;
@@ -42,20 +42,50 @@
         display: block;
       }
 
-      /* hud de corazones */
-      .hud {
+      /* columna hud izquierda */
+      .hud-col {
         position: fixed;
         top: 12px;
         left: 12px;
         display: flex;
-        gap: 4px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
         pointer-events: none;
         z-index: 10;
       }
+      /* hud de corazones */
+      .hud {
+        display: flex;
+        gap: 4px;
+      }
       .hud-heart {
         display: block;
-        width: 24px;
-        height: 24px;
+        width: 16px;
+        height: 16px;
+      }
+      /* fila de nivel */
+      .hud-nivel-fila {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .hud-nivel-ico {
+        width: 16px;
+        height: 16px;
+        image-rendering: pixelated;
+      }
+      .hud-nivel-txt {
+        font-size: 10px;
+        color: #fff;
+        font-family: "PixeloidMono", monospace;
+        opacity: 0.85;
+      }
+      /* minimapa */
+      #minimap {
+        display: block;
+        image-rendering: pixelated;
+        opacity: 0.75;
       }
 
       /* boton de ajustes arriba derecha */
@@ -463,11 +493,15 @@
 
     <div class="game-container">
       <canvas id="game" width="56" height="56" aria-label="ventana del juego"></canvas>
+    </div>
+    <div class="hud-col" aria-label="hud">
       <div id="hud" class="hud" aria-label="salud"></div>
-      <div class="hud-level" id="levelHud">
-        <span id="levelLabel">Nv.1</span>
+      <div class="hud-nivel-fila">
+        <img src="./assets/UI/level.gif" class="hud-nivel-ico" alt="nivel" />
+        <span id="levelLabel" class="hud-nivel-txt">Nv.1</span>
         <div class="hud-exp-bar"><div id="expBarFill" class="hud-exp-fill"></div></div>
       </div>
+      <canvas id="minimap" width="64" height="64"></canvas>
     </div>
 
     <div id="message" class="message" aria-live="polite"></div>
@@ -578,8 +612,10 @@
       const clearSaveButton  = document.getElementById("clearSaveButton");
       const canvas           = document.getElementById("game");
       const btnEditor        = document.getElementById("btnEditor");
+      const minimapCanvas    = document.getElementById("minimap");
+      const levelLabel       = document.getElementById("levelLabel");
 
-      const game = new Game(canvas, hud, inventoryGrid, messageElement, equipmentOverlay);
+      const game = new Game(canvas, hud, inventoryGrid, messageElement, equipmentOverlay, minimapCanvas, levelLabel);
       // expone el juego pa que el editor lo pueda pausar
       window.__game = game;
 
@@ -756,19 +792,16 @@
       toggleMusicButton.addEventListener("click",() => { game.toggleMusic(); });
       clearSaveButton.addEventListener("click",  () => { game.clearSave(); window.location.reload(); });
 
-      // editor solo en local
-      const esLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      // editor siempre disponible
       let editor = null;
-      if (esLocal) {
-        import("./editor/editor.js").then(mod => {
-          editor = mod.editor;
-          btnEditor.style.display = "";
-          btnEditor.addEventListener("click", () => {
-            settingsPanel.style.display = "none";
-            editor.abrir();
-          });
+      import("./editor/editor.js").then(mod => {
+        editor = mod.editor;
+        btnEditor.style.display = "";
+        btnEditor.addEventListener("click", () => {
+          settingsPanel.style.display = "none";
+          editor.abrir();
         });
-      }
+      });
 
       window.addEventListener("keydown", event => {
         if (event.defaultPrevented) return;

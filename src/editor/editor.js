@@ -1,7 +1,12 @@
-// editor de mapas -- solo funciona en servidor local
+// editor de mapas
 
-const TILE_PX = 24;
-const MAPAS = ['map1','map2','map3','map4','map5','map6','map7','map8','map9','map10','map11','map12'];
+const TILE_PX = 32;
+// lista dinamica de mapas via servidor
+let MAPAS = ['map1','map2','map3','map4','map5'];
+fetch('/api/listmaps')
+    .then(r => r.ok ? r.json() : null)
+    .then(lista => { if (lista && lista.length) MAPAS = lista; })
+    .catch(() => {});
 
 // colores pa tipos de colision
 const TIPO_COLOR = {
@@ -64,10 +69,24 @@ export class Editor {
 
     abrir() {
         if (!this.overlay) this._construirUI();
+        // rellena selector con lista actual
+        this._poblarSelector();
         this.overlay.style.display = 'flex';
         // pausa el juego mientras el editor esta abierto
         if (window.__game) window.__game.setInventoryOpen(true);
         if (!this.datos) this.cargarMapa(this.mapaActual);
+    }
+
+    _poblarSelector() {
+        if (!this.selMapa) return;
+        const actual = this.selMapa.value || this.mapaActual;
+        this.selMapa.innerHTML = '';
+        MAPAS.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m; o.textContent = m;
+            if (m === actual) o.selected = true;
+            this.selMapa.appendChild(o);
+        });
     }
 
     cerrar() {
@@ -100,13 +119,8 @@ export class Editor {
 
         barra.appendChild(this._span('MAPA', 'font-size:13px;letter-spacing:.12em;opacity:.4;margin-right:6px;'));
 
-        // selector de mapa
+        // selector de mapa -- se llena al abrir
         this.selMapa = document.createElement('select');
-        MAPAS.forEach(m => {
-            const o = document.createElement('option');
-            o.value = m; o.textContent = m;
-            this.selMapa.appendChild(o);
-        });
         this._estilarSelect(this.selMapa);
         this.selMapa.addEventListener('change', () => this.cargarMapa(this.selMapa.value));
         barra.appendChild(this.selMapa);
@@ -123,8 +137,8 @@ export class Editor {
         barra.appendChild(sep);
 
         // herramientas
-        this.btnPintar   = this._crearBtn('✏ Pintar',   () => this._setHerramienta('pintar'));
-        this.btnRellenar = this._crearBtn('⬛ Rellenar', () => this._setHerramienta('rellenar'));
+        this.btnPintar   = this._crearBtn('Pintar',   () => this._setHerramienta('pintar'));
+        this.btnRellenar = this._crearBtn('Rellenar', () => this._setHerramienta('rellenar'));
         barra.appendChild(this.btnPintar);
         barra.appendChild(this.btnRellenar);
 
@@ -133,12 +147,12 @@ export class Editor {
         barra.appendChild(this.lblEstado);
 
         // boton guardar
-        this.btnGuardar = this._crearBtn('💾 Guardar', () => this.guardar());
+        this.btnGuardar = this._crearBtn('Guardar', () => this.guardar());
         this.btnGuardar.style.marginLeft = '4px';
         barra.appendChild(this.btnGuardar);
 
         // cerrar
-        barra.appendChild(this._crearBtn('✕', () => this.cerrar()));
+        barra.appendChild(this._crearBtn('X', () => this.cerrar()));
         this.overlay.appendChild(barra);
 
         // cuerpo: paleta izquierda + canvas derecha
@@ -168,6 +182,24 @@ export class Editor {
         areaCanvas.appendChild(this.canvas);
         cuerpo.appendChild(areaCanvas);
 
+        // panel propiedades derecha
+        this.panelProps = document.createElement('div');
+        Object.assign(this.panelProps.style, {
+            width: '160px', minWidth: '160px',
+            borderLeft: '1px solid rgba(255,255,255,0.12)',
+            overflowY: 'auto', padding: '8px',
+            display: 'flex', flexDirection: 'column', gap: '4px',
+            fontSize: '9px',
+        });
+        this._propsHover = this._span('', 'opacity:.45;font-size:8px;word-break:break-all;');
+        this._propsSelTit = this._span('SELECCION', 'opacity:.35;font-size:8px;letter-spacing:.06em;margin-top:8px;');
+        this._propsSelVal = this._span('', 'opacity:.75;word-break:break-all;');
+        this.panelProps.appendChild(this._span('HOVER', 'opacity:.35;font-size:8px;letter-spacing:.06em;'));
+        this.panelProps.appendChild(this._propsHover);
+        this.panelProps.appendChild(this._propsSelTit);
+        this.panelProps.appendChild(this._propsSelVal);
+        cuerpo.appendChild(this.panelProps);
+
         this.overlay.appendChild(cuerpo);
         document.body.appendChild(this.overlay);
 
@@ -178,7 +210,12 @@ export class Editor {
             this._aplicar(e);
         });
         this.canvas.addEventListener('mousemove', e => {
+            this._actualizarHover(e);
             if (this.pintando && this.herramienta === 'pintar') this._pintar(e);
+        });
+        this.canvas.addEventListener('mouseleave', () => {
+            if (this._propsHover) this._propsHover.textContent = '';
+            this._hoverPos = null;
         });
         // click derecho = cuentagotas
         this.canvas.addEventListener('contextmenu', e => {
@@ -440,6 +477,38 @@ export class Editor {
         ctx.strokeRect(px, py, TILE_PX, TILE_PX);
     }
 
+    _actualizarHover(e) {
+        if (!this.datos || !this._propsHover) return;
+        const { x, y } = this._posDesdeEvento(e);
+        const { mapa, logica, defs } = this.datos;
+        const grid = this.capa === 'visual' ? mapa : logica;
+        if (y < 0 || y >= grid.length || x < 0 || x >= (grid[0]?.length ?? 0)) {
+            this._propsHover.textContent = '';
+            this._hoverPos = null;
+            return;
+        }
+        const id = grid[y]?.[x] ?? 0;
+        const fuente = this.capa === 'visual' ? defs.tiles : defs.collisions;
+        const val = fuente?.[id];
+        const tipo = this.capa === 'visual' ? (val ?? '?') : (val?.type ?? '?');
+        this._propsHover.textContent = `(${x},${y}) id:${id}\n${tipo}`;
+        // redibuja si cambio posicion pa mostrar resalte
+        const anterior = this._hoverPos;
+        this._hoverPos = { x, y };
+        if (anterior) this._dibujarTile(anterior.x, anterior.y);
+        this._dibujarTileConResalte(x, y);
+    }
+
+    _dibujarTileConResalte(x, y) {
+        this._dibujarTile(x, y);
+        if (!this.ctx) return;
+        const px = x * TILE_PX;
+        const py = y * TILE_PX;
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.strokeRect(px + 0.5, py + 0.5, TILE_PX - 1, TILE_PX - 1);
+    }
+
     _posDesdeEvento(e) {
         const rect = this.canvas.getBoundingClientRect();
         const escala = this.canvas.width / rect.width;
@@ -511,7 +580,7 @@ export class Editor {
     }
 
     _marcarSucio() {
-        if (this.lblEstado) this.lblEstado.textContent = '● sin guardar';
+        if (this.lblEstado) this.lblEstado.textContent = '* sin guardar';
     }
 
     async guardar() {
@@ -538,8 +607,8 @@ export class Editor {
 
             if (!r1.ok || !r2.ok) throw new Error('respuesta no-ok');
 
-            if (this.lblEstado) this.lblEstado.textContent = '✓ guardado';
-            this.btnGuardar.textContent = '✓ Guardado';
+            if (this.lblEstado) this.lblEstado.textContent = 'guardado';
+            this.btnGuardar.textContent = 'Guardado';
             setTimeout(() => {
                 this.btnGuardar.textContent = textoOriginal;
                 if (this.lblEstado) this.lblEstado.textContent = '';

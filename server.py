@@ -11,21 +11,46 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Expires", "0")
         super().end_headers()
 
+    def do_GET(self):
+        # lista recursiva de mapas
+        if self.path == "/api/listmaps":
+            try:
+                mapas = []
+                base = "maps"
+                for raiz, dirs, archivos in os.walk(base):
+                    if "map.csv" in archivos:
+                        rel = os.path.relpath(raiz, base).replace("\\", "/")
+                        if rel != ".":
+                            mapas.append(rel)
+                mapas.sort()
+                datos = json.dumps(mapas).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(datos)))
+                self.end_headers()
+                self.wfile.write(datos)
+            except Exception as e:
+                self.send_error(500, str(e))
+            return
+        super().do_GET()
+
     def do_POST(self):
         if self.path == "/api/write":
-            host = self.headers.get("Host", "")
-            if not (host.startswith("localhost") or host.startswith("127.0.0.1")):
-                self.send_error(403, "Solo desde localhost")
-                return
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 data = json.loads(self.rfile.read(length))
                 ruta = data["path"]
                 contenido = data["content"]
                 # solo deja escribir en maps/
-                if ".." in ruta or not ruta.startswith("maps/"):
+                if not ruta.startswith("maps/"):
                     self.send_error(403, "Prohibido")
                     return
+                base_abs = os.path.realpath("maps")
+                ruta_abs = os.path.realpath(ruta)
+                if not ruta_abs.startswith(base_abs + os.sep):
+                    self.send_error(403, "Prohibido")
+                    return
+                os.makedirs(os.path.dirname(ruta_abs), exist_ok=True)
                 with open(ruta, "w", encoding="utf-8") as f:
                     f.write(contenido)
                 self.send_response(200)
