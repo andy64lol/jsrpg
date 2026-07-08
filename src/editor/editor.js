@@ -178,6 +178,8 @@ export class Editor {
         this.ctx = this.canvas.getContext('2d');
         Object.assign(this.canvas.style, {
             display: 'block', imageRendering: 'pixelated', cursor: 'crosshair',
+            border: 'none', background: 'transparent',
+            width: 'auto', height: 'auto',
         });
         areaCanvas.appendChild(this.canvas);
         cuerpo.appendChild(areaCanvas);
@@ -418,8 +420,13 @@ export class Editor {
     _resizearCanvas() {
         if (!this.datos) return;
         const { mapa } = this.datos;
-        this.canvas.width  = (mapa[0]?.length ?? 0) * TILE_PX;
-        this.canvas.height = mapa.length * TILE_PX;
+        const cols = mapa[0]?.length ?? 0;
+        const rows = mapa.length;
+        this.canvas.width  = cols * TILE_PX;
+        this.canvas.height = rows * TILE_PX;
+        // upscale 2x in CSS so tiles appear bigger; imageRendering:pixelated keeps them crispy
+        this.canvas.style.width  = (cols * TILE_PX * 2) + 'px';
+        this.canvas.style.height = (rows * TILE_PX * 2) + 'px';
     }
 
     _renderizar() {

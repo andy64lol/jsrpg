@@ -81,12 +81,6 @@
         font-family: "PixeloidMono", monospace;
         opacity: 0.85;
       }
-      /* minimapa */
-      #minimap {
-        display: block;
-        image-rendering: pixelated;
-        opacity: 0.75;
-      }
 
       /* boton de ajustes arriba derecha */
       .settings-button {
@@ -501,7 +495,6 @@
         <span id="levelLabel" class="hud-nivel-txt">Nv.1</span>
         <div class="hud-exp-bar"><div id="expBarFill" class="hud-exp-fill"></div></div>
       </div>
-      <canvas id="minimap" width="64" height="64"></canvas>
     </div>
 
     <div id="message" class="message" aria-live="polite"></div>
@@ -612,10 +605,9 @@
       const clearSaveButton  = document.getElementById("clearSaveButton");
       const canvas           = document.getElementById("game");
       const btnEditor        = document.getElementById("btnEditor");
-      const minimapCanvas    = document.getElementById("minimap");
       const levelLabel       = document.getElementById("levelLabel");
 
-      const game = new Game(canvas, hud, inventoryGrid, messageElement, equipmentOverlay, minimapCanvas, levelLabel);
+      const game = new Game(canvas, hud, inventoryGrid, messageElement, equipmentOverlay, levelLabel);
       // expone el juego pa que el editor lo pueda pausar
       window.__game = game;
 
@@ -649,6 +641,7 @@
         const slotKey = slot.dataset.slot;
         if (slotKey && game.equipment[slotKey]) {
           game.unequipItem(slotKey);
+          game._inventoryRenderKey = null;
           renderEquipmentPanel();
           renderInventoryGrid();
         }
@@ -851,7 +844,12 @@
             // desequipa el primer slot equipado
             const slots = ["weapon","armor","offhand"];
             const slot = slots.find(s => game.equipment[s]);
-            if (slot) { game.unequipItem(slot); renderEquipmentPanel(); renderInventoryGrid(); }
+            if (slot) {
+              game.unequipItem(slot);
+              game._inventoryRenderKey = null;
+              renderEquipmentPanel();
+              renderInventoryGrid();
+            }
           }
           return;
         }

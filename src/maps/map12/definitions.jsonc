@@ -43,7 +43,12 @@
             "afterOpeningCollision": "0",
             "afterOpeningTile": "1"
         },
-        "8": { "type": "entity_spawn", "entity": "bat", "floorCollision": 0 }
+        "8": { "type": "entity_spawn", "entity": "bat", "floorCollision": 0 },
+        "9": {
+            "type": "door",
+            "target_map": "map15",
+            "target_tile": { "x": 1, "y": 3 }
+        }
     },
     "entities": {
         "bat": {

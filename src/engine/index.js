@@ -69,7 +69,7 @@ async function loadFlexJSON(url) {
 }
 
 export default class Game {
-    constructor(canvas, hudElement = null, inventoryElement = null, messageElement = null, equipmentElement = null, minimapElement = null, levelElement = null) {
+    constructor(canvas, hudElement = null, inventoryElement = null, messageElement = null, equipmentElement = null, levelElement = null) {
         debug(MODULE, "Game constructor called");
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
@@ -77,10 +77,7 @@ export default class Game {
         this.inventoryElement = inventoryElement;
         this.messageElement = messageElement;
         this.equipmentElement = equipmentElement;
-        this.minimapElement = minimapElement;
         this.levelElement = levelElement;
-        this.tileColorCache = {};
-        this._minimapKey = null;
         this.map = null;
         this.player = null;
         this.imageCache = {};
@@ -106,6 +103,10 @@ export default class Game {
         this.cameraLerpSpeed = 18;
         this.health = 0;
         this.maxHealth = 0;
+        this.baseMaxHealth = 10;
+        this.baseAttack = 1;
+        this.baseDefense = 0;
+        this._statCheckTimer = 0;
         this.isDead = false;
         this.lastUpdate = null;
         this.moveStepTimer = 0;
@@ -181,10 +182,13 @@ export default class Game {
         this.tileSize = this.config.map.tile_size ?? this.tileSize;
         this.viewportWidth = this.config.map.viewport_width ?? this.viewportWidth;
         this.viewportHeight = this.config.map.viewport_height ?? this.viewportHeight;
-        this.maxHealth = (this.config.player.hearts ?? this.maxHealth) || 10;
-        this.health = this.maxHealth;
+        this.baseMaxHealth = (this.config.player.hearts ?? 10) || 10;
+        this.baseAttack    = this.config.player.base_attack  ?? 1;
+        this.baseDefense   = this.config.player.base_defense ?? 0;
+        this.maxHealth = this.baseMaxHealth;
+        this.health    = this.maxHealth;
 
-        debug(MODULE, `Config applied: tileSize=${this.tileSize}, viewport=${this.viewportWidth}x${this.viewportHeight}, maxHealth=${this.maxHealth}`);
+        debug(MODULE, `Config applied: tileSize=${this.tileSize}, viewport=${this.viewportWidth}x${this.viewportHeight}, maxHealth=${this.maxHealth}, baseAtk=${this.baseAttack}, baseDef=${this.baseDefense}`);
 
         this.itemDefinitions = await loadFlexJSON(new URL("./items.jsonc", import.meta.url));
         info(MODULE, `Item definitions loaded: ${Object.keys(this.itemDefinitions).join(", ")}`);
@@ -192,7 +196,6 @@ export default class Game {
 
     getStepInterval() {
         const interval = 1 / Math.max(1, this.config.player.speed ?? 2);
-        debug(MODULE, `Step interval: ${interval.toFixed(3)}s (speed=${this.config.player.speed})`);
         return interval;
     }
 
@@ -240,6 +243,10 @@ export default class Game {
 
             this.player.facing = savedState.player.facing || "right";
             this.player.lastTilePosition = savedState.player.lastTilePosition || { x: this.player.x, y: this.player.y };
+            this.baseMaxHealth = savedState.baseMaxHealth ?? this.baseMaxHealth;
+            this.maxHealth     = savedState.maxHealth     ?? (this.baseMaxHealth + ((savedState.level ?? 1) - 1) * 2);
+            this.baseAttack    = savedState.baseAttack    ?? this.baseAttack;
+            this.baseDefense   = savedState.baseDefense   ?? this.baseDefense;
             this.health = Math.max(0, Math.min(this.maxHealth, savedState.health ?? this.maxHealth));
             this.inventory = Array.isArray(savedState.inventory) ? savedState.inventory : [];
             this.selectedInventoryIndex = savedState.selectedInventoryIndex ?? 0;
@@ -298,7 +305,6 @@ export default class Game {
             });
         }
 
-        this.buildTileColorCache();
         this.updateLevelDisplay();
         this.draw();
         info(MODULE, "Game started successfully — entering game loop");
@@ -509,6 +515,27 @@ export default class Game {
         }
 
         this.updateCamera(deltaSeconds);
+
+        // validación periódica de stats cada 5 s
+        this._statCheckTimer += deltaSeconds;
+        if (this._statCheckTimer >= 5) {
+            this._statCheckTimer = 0;
+            this.validateStats();
+        }
+    }
+
+    validateStats() {
+        const expectedMax = this.baseMaxHealth + (this.level - 1) * 2;
+        let changed = false;
+        if (this.maxHealth !== expectedMax) {
+            warn(MODULE, `validateStats: maxHealth desync (${this.maxHealth} → ${expectedMax}), corrigiendo`);
+            this.maxHealth = expectedMax;
+            this.health    = Math.min(this.health, this.maxHealth);
+            changed = true;
+        }
+        if (this.health < 0) { this.health = 0; changed = true; }
+        if (changed) this.saveState();
+        debug(MODULE, `validateStats — hp=${this.health}/${this.maxHealth}, atk=${this.getAttackPower()}, def=${this.getDefenseValue()}`);
     }
 
     async movePlayer(dx, dy) {
@@ -622,6 +649,10 @@ export default class Game {
                 lastTilePosition: this.player.lastTilePosition
             },
             health: this.health,
+            maxHealth: this.maxHealth,
+            baseMaxHealth: this.baseMaxHealth,
+            baseAttack: this.baseAttack,
+            baseDefense: this.baseDefense,
             inventory: this.inventory,
             selectedInventoryIndex: this.selectedInventoryIndex,
             equipment: this.equipment,
@@ -1162,9 +1193,7 @@ export default class Game {
         await this.loadTextures();
         this.resizeCanvas();
         this.applyTileEffects(this.player.x, this.player.y);
-        this.buildTileColorCache();
         this.updateLevelDisplay();
-        this._minimapKey = null;
         this.saveState();
 
         if (this.transition) {
@@ -1282,7 +1311,6 @@ export default class Game {
         this.drawHealthUI();
         this.drawInventoryUI();
         this.drawLevelUI();
-        this.drawMinimap();
 
         if (this.isDead) {
             ctx.fillStyle = "rgba(0, 0, 0, 0.95)";
@@ -1411,13 +1439,13 @@ export default class Game {
 
     getAttackPower() {
         const w = this.equipment.weapon ? this.itemDefinitions[this.equipment.weapon] : null;
-        return 1 + (w?.stats?.attack ?? 0);
+        return this.baseAttack + (w?.stats?.attack ?? 0);
     }
 
     getDefenseValue() {
         const a = this.equipment.armor   ? this.itemDefinitions[this.equipment.armor]   : null;
         const o = this.equipment.offhand ? this.itemDefinitions[this.equipment.offhand] : null;
-        return (a?.stats?.defense ?? 0) + (o?.stats?.defense ?? 0);
+        return this.baseDefense + (a?.stats?.defense ?? 0) + (o?.stats?.defense ?? 0);
     }
 
     equipItem(itemId) {
@@ -1535,60 +1563,6 @@ export default class Game {
         if (!this._expFill)    this._expFill    = document.getElementById("expBarFill");
         if (this._levelLabel)  this._levelLabel.textContent = `Nv.${this.level}`;
         if (this._expFill)     this._expFill.style.width = `${Math.round(this.exp / this.expToNextLevel * 100)}%`;
-    }
-
-    // guarda color promedio de cada tile pa el minimapa
-    buildTileColorCache() {
-        if (!this.map) return;
-        this.tileColorCache = {};
-        const tmp = document.createElement('canvas');
-        tmp.width = 1; tmp.height = 1;
-        const ctx = tmp.getContext('2d');
-        for (const [id, src] of Object.entries(this.map.definitions.tiles)) {
-            const img = this.tileImages[src];
-            if (!img) continue;
-            ctx.drawImage(img, 0, 0, 1, 1);
-            const d = ctx.getImageData(0, 0, 1, 1).data;
-            this.tileColorCache[id] = `rgb(${d[0]},${d[1]},${d[2]})`;
-        }
-    }
-
-    // dibuja minimapa en el canvas externo, throttleado por posicion
-    drawMinimap() {
-        if (!this.minimapElement || !this.map) return;
-        const clave = `${this.map.name}|${this.player.x},${this.player.y}`;
-        if (clave === this._minimapKey) return;
-        this._minimapKey = clave;
-
-        const el = this.minimapElement;
-        const mapW = this.map.width;
-        const mapH = this.map.height;
-        // escala pa que quepa en el canvas del minimapa
-        const escX = el.width  / mapW;
-        const escY = el.height / mapH;
-        const ctx = el.getContext('2d');
-        ctx.clearRect(0, 0, el.width, el.height);
-
-        for (let y = 0; y < mapH; y++) {
-            for (let x = 0; x < mapW; x++) {
-                const id = this.map.map[y]?.[x];
-                ctx.fillStyle = this.tileColorCache[id] ?? '#111';
-                ctx.fillRect(
-                    Math.round(x * escX), Math.round(y * escY),
-                    Math.max(1, Math.round(escX)), Math.max(1, Math.round(escY))
-                );
-            }
-        }
-
-        // punto blanco = jugador
-        ctx.fillStyle = '#fff';
-        const pw = Math.max(2, Math.round(escX * 1.5));
-        const ph = Math.max(2, Math.round(escY * 1.5));
-        ctx.fillRect(
-            Math.round(this.player.x * escX - pw / 2),
-            Math.round(this.player.y * escY - ph / 2),
-            pw, ph
-        );
     }
 
     // actualiza el label de nivel externo

@@ -40,6 +40,11 @@
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
             "afterOpeningCollision": "0",
             "afterOpeningTile": "1"
+        },
+        "7": {
+            "type": "door",
+            "target_map": "map13",
+            "target_tile": { "x": 1, "y": 3 }
         }
     }
 }
