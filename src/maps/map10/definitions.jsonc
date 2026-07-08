@@ -21,7 +21,7 @@
             "solid": true,
             "interactType": "click",
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
-            "afterInteractText": "La fuente restaura tu fuerza. +10 HP."
+            "afterInteractText": "Bebiste la agua fresca de la fuente y te regeneraste 10 puntos de salud."
         },
         "5": {
             "type": "chest",

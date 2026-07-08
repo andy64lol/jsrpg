@@ -23,7 +23,7 @@
             "solid": true,
             "interactType": "click",
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
-            "afterInteractText": "El agua del final te restaura. +10 HP."
+            "afterInteractText": "Bebiste el agua del pozo y te regeneraste 10 puntos de salud."
         },
         "6": {
             "type": "chest",
