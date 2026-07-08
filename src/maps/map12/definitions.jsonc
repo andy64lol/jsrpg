@@ -47,7 +47,7 @@
         "9": {
             "type": "door",
             "target_map": "map15",
-            "target_tile": { "x": 1, "y": 3 }
+            "target_tile": { "x": 2, "y": 3 }
         }
     },
     "entities": {

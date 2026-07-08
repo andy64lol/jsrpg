@@ -12,7 +12,7 @@
         "3": {
             "type": "door",
             "target_map": "map8",
-            "target_tile": { "x": 5, "y": 9 }
+            "target_tile": { "x": 13, "y": 2 }
         },
         "4": { "type": "player_damage", "damage": 1 },
         "5": { "type": "entity_spawn", "entity": "bat_oscuro", "floorCollision": 0 },

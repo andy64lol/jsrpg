@@ -12,7 +12,7 @@
         "2": {
             "type": "door",
             "target_map": "map12",
-            "target_tile": { "x": 9, "y": 3 }
+            "target_tile": { "x": 10, "y": 4 }
         },
         "4": {
             "type": "heal",

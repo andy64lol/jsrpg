@@ -884,7 +884,7 @@ export default class Game {
             this.entities = this.entities.filter(e => e !== entity);
             (this.killedEntityIds[this.map.name] ??= []).push(entity.instanceId);
             info(MODULE, `"${entity.type}" derrotado en (${entity.x},${entity.y})`);
-            const NOMBRES = { bat: 'murciélago', bat_oscuro: 'murciélago oscuro' };
+            const NOMBRES = { bat: 'murciélago', bat_oscuro: 'murciélago oscuro', bat_grande: 'murciélago grande', bat_guardian: 'murciélago guardián', bat_elite: 'murciélago élite' };
             const nombreEnemigo = NOMBRES[entity.type] ?? entity.type;
             this.showMessage(`¡Derrotaste al ${nombreEnemigo}!`);
             this.gainExp(entity.expDrop);
