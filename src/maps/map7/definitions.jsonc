@@ -22,7 +22,7 @@
         },
         "8": {
             "type": "chest",
-            "contains": "redApple",
+            "contains": "rustyIronSword",
             "solid": true,
             "interactType": "click",
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
@@ -37,7 +37,8 @@
             "damage": 1,
             "speed": 1.5,
             "behavior": "patrol",
-            "chaseRadius": 5
+            "chaseRadius": 5,
+            "exp_drop": 15
         }
     }
 }

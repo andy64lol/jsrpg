@@ -29,7 +29,8 @@
             "damage": 1,
             "speed": 1.5,
             "behavior": "chase",
-            "chaseRadius": 5
+            "chaseRadius": 5,
+            "exp_drop": 20
         }
     }
 }

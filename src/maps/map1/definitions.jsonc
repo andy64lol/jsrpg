@@ -39,7 +39,7 @@
                 "player_in_radius": 1,
                 "diagonal": false
             },
-            "afterInteractText": "Bebiste la agua fresca de la fuente y te regeneraste 10 puntos de salud."
+            "afterInteractText": "You drank the water and restored 10 health."
         },
         "5":{
             "type": "entity_spawn",
@@ -59,7 +59,8 @@
             "damage": 1,
             "speed": 1,
             "behavior": "patrol",
-            "chaseRadius": 4
+            "chaseRadius": 4,
+            "exp_drop": 15
         }
     }
 }

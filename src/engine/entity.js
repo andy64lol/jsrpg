@@ -20,6 +20,7 @@ export class Entity {
         this.moveInterval  = 1 / Math.max(0.1, this.speed);
         this.behavior      = template.behavior   ?? "patrol";
         this.chaseRadius   = Number(template.chaseRadius ?? 3);
+        this.expDrop       = Number(template.exp_drop ?? 10);
 
         // ruta de patrulla, si no hay se inventa una
         const rawPatrol = spawnDef.patrol;

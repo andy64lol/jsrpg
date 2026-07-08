@@ -69,13 +69,14 @@ async function loadFlexJSON(url) {
 }
 
 export default class Game {
-    constructor(canvas, hudElement = null, inventoryElement = null, messageElement = null) {
+    constructor(canvas, hudElement = null, inventoryElement = null, messageElement = null, equipmentElement = null) {
         debug(MODULE, "Game constructor called");
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
         this.hudElement = hudElement;
         this.inventoryElement = inventoryElement;
         this.messageElement = messageElement;
+        this.equipmentElement = equipmentElement;
         this.map = null;
         this.player = null;
         this.imageCache = {};
@@ -113,6 +114,11 @@ export default class Game {
         this.visualPosition = { x: 0, y: 0 };
         this.inventory = [];
         this.selectedInventoryIndex = 0;
+        this.equipment = { weapon: null, armor: null, offhand: null };
+        this.equipmentOpen = false;
+        this.level = 1;
+        this.exp = 0;
+        this.expToNextLevel = 80;
         this.itemDefinitions = {};
         this.mapChanges = [];
         this.messageTimeout = null;
@@ -233,6 +239,10 @@ export default class Game {
             this.health = Math.max(0, Math.min(this.maxHealth, savedState.health ?? this.maxHealth));
             this.inventory = Array.isArray(savedState.inventory) ? savedState.inventory : [];
             this.selectedInventoryIndex = savedState.selectedInventoryIndex ?? 0;
+            this.equipment = savedState.equipment ?? { weapon: null, armor: null, offhand: null };
+            this.level = savedState.level ?? 1;
+            this.exp = savedState.exp ?? 0;
+            this.expToNextLevel = savedState.expToNextLevel ?? 80;
 
             this.mapChanges = Array.isArray(savedState.mapChanges) ? savedState.mapChanges : [];
             // Migrate legacy flat-array saves to per-map format
@@ -567,13 +577,15 @@ export default class Game {
         }
     }
 
-    takeDamage(amount) {
+    takeDamage(rawAmount) {
         if (this.isDead) {
             return;
         }
+        const defense = this.getDefenseValue();
+        const amount  = Math.max(1, rawAmount - defense);
         const oldHealth = this.health;
         this.health = Math.max(0, this.health - amount);
-        warn(MODULE, `Player took ${amount} damage — health: ${oldHealth} → ${this.health}`);
+        warn(MODULE, `Player took ${amount} damage (raw=${rawAmount}, def=${defense}) — health: ${oldHealth} → ${this.health}`);
 
         if (this.sounds.damage) {
             this.sounds.damage.play().catch((err) => {
@@ -606,6 +618,10 @@ export default class Game {
             health: this.health,
             inventory: this.inventory,
             selectedInventoryIndex: this.selectedInventoryIndex,
+            equipment: this.equipment,
+            level: this.level,
+            exp: this.exp,
+            expToNextLevel: this.expToNextLevel,
             mapChanges: this.mapChanges,
             killedEntityIds: this.killedEntityIds
         });
@@ -656,6 +672,12 @@ export default class Game {
         }
 
         debug(MODULE, `Using item: "${item.display_name}" (type="${item.type}")`);
+
+        if (item.type === "equipment") {
+            const itemId = this.inventory[this.selectedInventoryIndex];
+            if (itemId) this.equipItem(itemId);
+            return;
+        }
 
         if (item.type === "consumable") {
             const amount = item.use?.amount ?? item.heals ?? 0;
@@ -818,16 +840,17 @@ export default class Game {
 
     attackEntity(entity) {
         if (this.isDead || this.transition) { return; }
-        entity.health -= 1;
-        debug(MODULE, `Golpe a "${entity.type}" en (${entity.x},${entity.y}) — HP: ${entity.health}/${entity.maxHealth}`);
+        const atk = this.getAttackPower();
+        entity.health -= atk;
+        debug(MODULE, `Golpe a "${entity.type}" en (${entity.x},${entity.y}) — daño=${atk} HP: ${entity.health}/${entity.maxHealth}`);
         if (entity.health <= 0) {
             this.entities = this.entities.filter(e => e !== entity);
             (this.killedEntityIds[this.map.name] ??= []).push(entity.instanceId);
-            this.saveState();
             info(MODULE, `"${entity.type}" derrotado en (${entity.x},${entity.y})`);
             const NOMBRES = { bat: 'murciélago', bat_oscuro: 'murciélago oscuro' };
             const nombreEnemigo = NOMBRES[entity.type] ?? entity.type;
             this.showMessage(`¡Derrotaste al ${nombreEnemigo}!`);
+            this.gainExp(entity.expDrop);
         } else {
             const kbDx = Math.sign(entity.x - this.player.x);
             const kbDy = Math.sign(entity.y - this.player.y);
@@ -1193,7 +1216,15 @@ export default class Game {
                 if (ex < -1 || ey < -1 || ex >= this.viewportWidth + 1 || ey >= this.viewportHeight + 1) { continue; }
                 const entitySprite = this.imageCache[entity.sprite];
                 if (entitySprite) {
-                    ctx.drawImage(entitySprite, ex * this.tileSize, ey * this.tileSize, this.tileSize, this.tileSize);
+                    if (entity.facing === "left") {
+                        ctx.save();
+                        ctx.translate((ex + 1) * this.tileSize, ey * this.tileSize);
+                        ctx.scale(-1, 1);
+                        ctx.drawImage(entitySprite, 0, 0, this.tileSize, this.tileSize);
+                        ctx.restore();
+                    } else {
+                        ctx.drawImage(entitySprite, ex * this.tileSize, ey * this.tileSize, this.tileSize, this.tileSize);
+                    }
                 } else {
                     ctx.fillStyle = "#ff0000";
                     ctx.fillRect(ex * this.tileSize, ey * this.tileSize, this.tileSize, this.tileSize);
@@ -1241,6 +1272,7 @@ export default class Game {
 
         this.drawHealthUI();
         this.drawInventoryUI();
+        this.drawLevelUI();
 
         if (this.isDead) {
             ctx.fillStyle = "rgba(0, 0, 0, 0.95)";
@@ -1329,6 +1361,12 @@ export default class Game {
             let stat = "";
             if (item?.use?.action === "heal") {
                 stat = esc(`+${item.use.amount} HP`);
+            } else if (item?.type === "equipment") {
+                const atk = item.stats?.attack ?? 0;
+                const def = item.stats?.defense ?? 0;
+                if (atk > 0)      stat = esc(`ATK +${atk}`);
+                else if (def > 0) stat = esc(`DEF +${def}`);
+                else              stat = esc(item.slot ?? "equipo");
             } else if (item?.type === "consumable") {
                 stat = "Consumible";
             }
@@ -1357,5 +1395,124 @@ export default class Game {
             debug(MODULE, "Message timeout — hiding message");
             this.messageElement.style.opacity = "0";
         }, 2000);
+    }
+
+    // --- equipamiento ---
+
+    getAttackPower() {
+        const w = this.equipment.weapon ? this.itemDefinitions[this.equipment.weapon] : null;
+        return 1 + (w?.stats?.attack ?? 0);
+    }
+
+    getDefenseValue() {
+        const a = this.equipment.armor   ? this.itemDefinitions[this.equipment.armor]   : null;
+        const o = this.equipment.offhand ? this.itemDefinitions[this.equipment.offhand] : null;
+        return (a?.stats?.defense ?? 0) + (o?.stats?.defense ?? 0);
+    }
+
+    equipItem(itemId) {
+        const def = this.itemDefinitions[itemId];
+        if (!def || def.type !== "equipment") return false;
+        const slot = def.slot;
+        if (!["weapon","armor","offhand"].includes(slot)) return false;
+        const current = this.equipment[slot];
+        if (current) this.inventory.push(current);
+        const idx = this.inventory.indexOf(itemId);
+        if (idx >= 0) this.inventory.splice(idx, 1);
+        if (this.selectedInventoryIndex >= this.inventory.length) {
+            this.selectedInventoryIndex = Math.max(0, this.inventory.length - 1);
+        }
+        this.equipment[slot] = itemId;
+        info(MODULE, `Equipado: "${itemId}" en slot "${slot}"`);
+        this.showMessage(`Equipaste: ${def.display_name}`);
+        this.saveState();
+        this.onInventoryChanged?.();
+        this.onEquipmentChanged?.();
+        return true;
+    }
+
+    unequipItem(slot) {
+        const itemId = this.equipment[slot];
+        if (!itemId) return false;
+        this.equipment[slot] = null;
+        this.inventory.push(itemId);
+        const def = this.itemDefinitions[itemId];
+        info(MODULE, `Desequipado: "${itemId}" de slot "${slot}"`);
+        this.showMessage(`Desequipaste: ${def?.display_name ?? itemId}`);
+        this.saveState();
+        this.onInventoryChanged?.();
+        this.onEquipmentChanged?.();
+        return true;
+    }
+
+    // --- niveles y exp ---
+
+    gainExp(amount) {
+        if (!amount || amount <= 0) return;
+        this.exp += amount;
+        let leveled = false;
+        while (this.exp >= this.expToNextLevel) {
+            this.exp -= this.expToNextLevel;
+            this.level += 1;
+            this.maxHealth += 2;
+            this.health = Math.min(this.health + 2, this.maxHealth);
+            this.expToNextLevel = Math.floor(80 * Math.pow(this.level, 1.2));
+            leveled = true;
+            info(MODULE, `Level up! nivel=${this.level}, expToNext=${this.expToNextLevel}`);
+        }
+        if (leveled) {
+            this.showMessage(`¡Subiste al nivel ${this.level}! +2 HP máx.`);
+        }
+        this.saveState();
+    }
+
+    setEquipmentOpen(open) {
+        this.equipmentOpen = open;
+        this.inventoryOpen = open; // pausa el juego mientras está abierto
+    }
+
+    // --- UI de equipamiento ---
+
+    drawEquipmentUI() {
+        if (!this.equipmentElement || !this.equipmentOpen) return;
+        const SLOTS = [
+            { key: "weapon",  label: "Arma",    icon: "assets/UI/player_equipment_slots/weapon.webp"  },
+            { key: "armor",   label: "Armadura", icon: "assets/UI/player_equipment_slots/armor.webp"   },
+            { key: "offhand", label: "Off-hand", icon: "assets/UI/player_equipment_slots/offhand.webp" },
+        ];
+        const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+        const slotsHtml = SLOTS.map(({ key, label, icon }) => {
+            const itemId = this.equipment[key];
+            const item   = itemId ? this.itemDefinitions[itemId] : null;
+            const imgSrc = item?.texture ?? icon;
+            const name   = item ? esc(item.display_name) : label;
+            const atk  = item?.stats?.attack  ?? 0;
+            const def  = item?.stats?.defense ?? 0;
+            const stat = atk > 0 ? `ATK +${atk}` : def > 0 ? `DEF +${def}` : "";
+            return `<div class="equip-slot" data-slot="${esc(key)}">
+                <img src="${esc(imgSrc)}" class="equip-slot-icon" alt="${name}" ${item ? "" : 'style="opacity:.3"'}>
+                <span class="equip-slot-label">${esc(label)}</span>
+                <span class="equip-slot-item-name">${item ? name : ""}</span>
+                ${stat ? `<span class="equip-slot-stat">${esc(stat)}</span>` : ""}
+            </div>`;
+        }).join("");
+        const statsHtml = `
+            <div class="equip-stat-row"><span class="equip-stat-key">Nivel</span><span class="equip-stat-val">${this.level}</span></div>
+            <div class="equip-stat-row"><span class="equip-stat-key">EXP</span><span class="equip-stat-val">${this.exp}/${this.expToNextLevel}</span></div>
+            <div class="equip-stat-row"><span class="equip-stat-key">ATK</span><span class="equip-stat-val">${this.getAttackPower()}</span></div>
+            <div class="equip-stat-row"><span class="equip-stat-key">DEF</span><span class="equip-stat-val">${this.getDefenseValue()}</span></div>
+            <div class="equip-stat-row"><span class="equip-stat-key">HP</span><span class="equip-stat-val">${this.health}/${this.maxHealth}</span></div>
+        `;
+        const slotGrid  = this.equipmentElement.querySelector("#equipSlotGrid");
+        const statsGrid = this.equipmentElement.querySelector("#equipStatsGrid");
+        if (slotGrid)  slotGrid.innerHTML  = slotsHtml;
+        if (statsGrid) statsGrid.innerHTML = statsHtml;
+    }
+
+    drawLevelUI() {
+        if (!this._levelLabel) this._levelLabel = document.getElementById("levelLabel");
+        if (!this._expFill)    this._expFill    = document.getElementById("expBarFill");
+        if (this._levelLabel)  this._levelLabel.textContent = `Nv.${this.level}`;
+        if (this._expFill)     this._expFill.style.width = `${Math.round(this.exp / this.expToNextLevel * 100)}%`;
     }
 }

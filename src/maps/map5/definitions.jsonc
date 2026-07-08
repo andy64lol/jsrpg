@@ -28,7 +28,8 @@
             "damage": 1,
             "speed": 1.5,
             "behavior": "patrol",
-            "chaseRadius": 3
+            "chaseRadius": 3,
+            "exp_drop": 15
         }
     }
 }

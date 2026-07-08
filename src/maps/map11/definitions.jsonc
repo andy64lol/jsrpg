@@ -20,7 +20,7 @@
         "7": { "type": "entity_spawn", "entity": "bat_oscuro", "floorCollision": 0 },
         "8": {
             "type": "chest",
-            "contains": "redApple",
+            "contains": "bronzeSword",
             "solid": true,
             "interactType": "click",
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
@@ -35,7 +35,8 @@
             "damage": 2,
             "speed": 2,
             "behavior": "chase",
-            "chaseRadius": 6
+            "chaseRadius": 6,
+            "exp_drop": 40
         }
     }
 }

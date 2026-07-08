@@ -23,11 +23,11 @@
             "solid": true,
             "interactType": "click",
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
-            "afterInteractText": "Bebiste el agua del pozo y te regeneraste 10 puntos de salud."
+            "afterInteractText": "El agua del final te restaura. +10 HP."
         },
         "6": {
             "type": "chest",
-            "contains": "redApple",
+            "contains": "titaniumSword",
             "solid": true,
             "interactType": "click",
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
@@ -36,7 +36,7 @@
         },
         "7": {
             "type": "chest",
-            "contains": "redApple",
+            "contains": "stainlessSteelShield",
             "solid": true,
             "interactType": "click",
             "interactRequirements": { "player_in_radius": 1, "diagonal": false },
@@ -52,7 +52,8 @@
             "damage": 1,
             "speed": 1.5,
             "behavior": "patrol",
-            "chaseRadius": 3
+            "chaseRadius": 3,
+            "exp_drop": 15
         }
     }
 }
